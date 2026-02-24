@@ -78,7 +78,7 @@ export function ChannelHealthGate() {
                 setSection7Skipped(false);
                 // Stay on page; re-render will show the 5 questions
               }}
-              className="rounded-lg border-2 border-[#1A8A7D] bg-[#1A8A7D]/10 px-6 py-3 font-semibold text-[#1B3A5C] hover:bg-[#1A8A7D]/20"
+              className="rounded-lg border-2 border-gray-200 bg-white px-6 py-3 font-medium text-[#1B3A5C] hover:border-gray-300 hover:bg-gray-50"
             >
               Yes
             </button>

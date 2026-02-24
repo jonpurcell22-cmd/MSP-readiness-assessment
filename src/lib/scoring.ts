@@ -195,4 +195,24 @@ export const TIER_INTERPRETATIONS: Record<ReadinessTier, string> = {
     "Significant gaps. Focus on product maturity before pursuing MSP distribution.",
 };
 
+/** Score range label per tier (for tier definition block). */
+export const TIER_SCORE_RANGES: Record<ReadinessTier, string> = {
+  ready: "85-100",
+  capable: "65-84",
+  emerging: "45-64",
+  premature: "Below 45",
+};
+
+/** Tier definition text for results page and PDF executive summary. */
+export const TIER_DEFINITIONS: Record<ReadinessTier, string> = {
+  ready:
+    "Strong foundation across all dimensions. Your product, pricing, and organization are positioned for MSP distribution. Focus shifts to program design, partner recruitment strategy, and distributor placement.",
+  capable:
+    "Good product-market fit for the MSP channel with targeted gaps to close before launch. The foundation is there, but specific areas need attention to avoid early program failures that damage your reputation in the MSP community.",
+  emerging:
+    "Your product has potential for MSP distribution but requires meaningful foundational work before a program launch would succeed. Launching prematurely in the MSP ecosystem is worse than waiting, because word travels fast and first impressions stick.",
+  premature:
+    "Significant gaps exist across multiple dimensions. Launching an MSP program today would waste investment and damage your credibility in a community where reputation is everything. Focus on product maturity and organizational readiness before pursuing MSP distribution.",
+};
+
 export const MAX_SECTION_SCORE = MAX_SECTION_RAW;

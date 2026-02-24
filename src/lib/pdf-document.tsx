@@ -12,13 +12,21 @@ import type { SectionTotals, ReadinessTier } from "@/types/assessment";
 import type { ThreeYearProjection } from "@/lib/pdf-financials";
 import { SECTION_PDF_LABELS, getStrengthsAndGaps } from "@/lib/pdf-questions";
 import { formatCurrency } from "@/lib/pdf-financials";
-import { TIER_LABELS } from "@/lib/scoring";
+import { TIER_LABELS, TIER_DEFINITIONS, TIER_SCORE_RANGES } from "@/lib/scoring";
 
 const TIER_COLORS: Record<ReadinessTier, string> = {
   ready: "#2D8C46",
   capable: "#1A8A7D",
   emerging: "#D97706",
   premature: "#DC2626",
+};
+
+/** Low-opacity background for tier definition block (hex with alpha for react-pdf). */
+const TIER_BG: Record<ReadinessTier, string> = {
+  ready: "#2D8C4618",
+  capable: "#1A8A7D18",
+  emerging: "#D9770618",
+  premature: "#DC262618",
 };
 
 const COLORS = {
@@ -140,6 +148,12 @@ export function AssessmentPDFDocument({ data }: { data: PDFData }) {
           <View style={[styles.tierBadge, { backgroundColor: tierColor }]}>
             <Text>{TIER_LABELS[readinessTier]}</Text>
           </View>
+        </View>
+        <View style={{ backgroundColor: TIER_BG[readinessTier], padding: 12, marginBottom: 16, borderRadius: 6, borderWidth: 1, borderColor: COLORS.border }}>
+          <Text style={[styles.body, { fontWeight: 600, marginBottom: 4 }]}>
+            {TIER_LABELS[readinessTier]} ({TIER_SCORE_RANGES[readinessTier]})
+          </Text>
+          <Text style={styles.body}>{TIER_DEFINITIONS[readinessTier]}</Text>
         </View>
         <Text style={[styles.body, { marginBottom: 16 }]}>{narrative.executive_summary}</Text>
         {redFlags.length > 0 && (

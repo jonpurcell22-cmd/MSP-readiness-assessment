@@ -7,6 +7,8 @@ import {
   TIER_LABELS,
   TIER_COLORS,
   TIER_INTERPRETATIONS,
+  TIER_DEFINITIONS,
+  TIER_SCORE_RANGES,
   MAX_SECTION_SCORE,
 } from "@/lib/scoring";
 import type { NarrativeOutput } from "@/lib/narrative";
@@ -194,7 +196,7 @@ export function ResultsTeaser() {
     <main className="min-h-screen bg-[#F4F7FA] px-4 py-8 sm:px-6 sm:py-10">
       <div className="mx-auto max-w-2xl">
         {/* Overall score */}
-        <div className="mb-8 text-center">
+        <div className="mb-6 text-center">
           <p className="text-sm font-medium uppercase tracking-wide text-[#1B3A5C]/70">
             Your Readiness Score
           </p>
@@ -210,6 +212,19 @@ export function ResultsTeaser() {
           >
             {TIER_LABELS[readinessTier]}
           </span>
+        </div>
+
+        {/* Tier definition */}
+        <div
+          className="mb-8 rounded-xl border border-[#1B3A5C]/10 px-5 py-4 text-left"
+          style={{ backgroundColor: `${tierColor}18` }}
+        >
+          <p className="text-sm font-semibold text-[#1B3A5C]">
+            {TIER_LABELS[readinessTier]} ({TIER_SCORE_RANGES[readinessTier]})
+          </p>
+          <p className="mt-2 text-[#1B3A5C]/90 leading-relaxed">
+            {TIER_DEFINITIONS[readinessTier]}
+          </p>
         </div>
 
         {/* AI summary or tier interpretation */}

@@ -3,6 +3,8 @@
  * Produced by Claude API or generateFallbackNarrative().
  */
 
+import { SECTION_QUESTION_NAMES } from "@/lib/pdf-questions";
+
 export interface SectionInterpretation {
   section_number: number;
   section_name: string;
@@ -129,61 +131,72 @@ export function payloadToNarrativeInput(payload: {
   };
 }
 
-const SYSTEM_PROMPT = `You are a senior MSP channel strategy consultant who has built 50+ MSP programs from zero. You are writing personalized assessment report narratives for B2B software vendors. Your output must sound like an experienced channel consultant giving a real assessment, not a chatbot summary.
+const SYSTEM_PROMPT = `You are Jon Purcell, a senior MSP channel strategist who built Apple's MSP program from zero, spent 9 years in VMware's channel organization, and is currently rebuilding Workiva's MSP motion. You are writing a personalized executive assessment for a software vendor evaluating MSP channel readiness.
 
-Voice and tone:
-- Direct, confident, and specific. You speak from deep experience. Not academic, not salesy, not generic.
+Your voice is authoritative but not arrogant. You write like someone who has seen 50 vendors attempt this and knows exactly which patterns lead to success and which lead to failure. You are specific, never generic. You never say things like "there are areas for improvement" or "consider focusing on key areas." You name the specific problem, explain why it matters to MSPs in operational terms, and say what to do about it.
+
+Rules:
+- Analyze ALL individual question scores (1-5) across every section. Do not just summarize section totals.
+- Identify the 2-3 most critical gaps that will block MSP program success. Prioritize by impact: a score of 1-2 on multi-tenancy, pricing, or channel conflict is more damaging than a 2 on community visibility. Explain WHY each gap matters in concrete MSP operational terms.
+- Identify 1-2 genuine strengths the company has today. Be specific about what they scored well on and how it gives them an advantage. Do not fabricate strengths that don't exist in the data.
+- Never use generic filler phrases like "there are opportunities for growth," "several areas need attention," "the assessment reveals," or "key areas to focus on."
+- Never repeat the same point across different sections of the narrative. Each section should add new insight.
+- Reference actual MSP ecosystem dynamics by name: Pax8, ConnectWise, IT Nation, PSA/RMM integrations, multi-tenant architecture, partner activation rates, deal registration.
+- When referencing their product category, explain how that category specifically maps to MSP demand and competitive dynamics.
+- Always use the term "expert" not "someone who has built these programs" when recommending the deep-dive.
+- Always end the executive summary with: "Regardless of where you landed, the logical next step is a complimentary 90-minute deep-dive assessment with an expert who can uncover the nuances a self-assessment cannot. No cost, no obligation."
 - Never use em dashes. Use commas, periods, colons, or separate sentences.
-- Never use filler like "in today's competitive landscape," "it's important to note," or "overall."
-- Write in second person ("your product," "your organization"). Be honest; credibility over hype.
-
-Required specificity:
-- Reference specific question scores by name and number. Example: "Your multi-tenancy scored a 2, which is a dealbreaker for MSPs who manage dozens of clients from a single console." Do this for both strengths (4–5) and gaps (1–2). Never say "one area" or "certain dimensions" without naming them.
-- Tie their product category to MSP demand. Explain how their category (e.g., Backup & DR, Cybersecurity, Compliance) maps to what MSPs are actually buying and bundling. Reference category-specific dynamics.
-- Give concrete, actionable recommendations. No vague advice like "improve this area" or "consider strengthening." Name the exact dimension, what to do, and why it matters to an MSP. One specific recommendation per section minimum.
-- Financial commentary must reference their actual ARR and ACV numbers. Use their real figures in the sentence. Ground projections in their scale; label assumptions. Conservative and credible.
-
-Length requirements (minimums):
-- Executive summary: 4 full sentences minimum. Cover what the score means, single biggest opportunity, single biggest blocker, and one clear recommendation.
-- Each section interpretation: 3 sentences minimum, plus one specific recommendation. Reference named questions and scores; explain operational impact for MSPs.
-- Financial commentary: Reference their ARR and ACV explicitly; 2–3 substantive sentences.
+- Write in second person ("your product," "your organization").
+- The tone should make the reader think "this person clearly understands our situation" not "this is a generic report."
 
 You will receive the full assessment data as structured text and must return ONLY valid JSON matching the specified output format (no markdown, no preamble).`;
 
-export function buildNarrativePrompt(data: NarrativeInput): string {
-  const s7Block = data.section7Skipped
-    ? ""
-    : `- Section 7 (Existing Channel Health): ${data.section7Total}/25
-  Individual: Activation Rate=${data.s7!.q1}, Revenue Concentration=${data.s7!.q2}, Retention=${data.s7!.q3}, Time to First Client=${data.s7!.q4}, Satisfaction=${data.s7!.q5}`;
+function formatSectionScores(
+  sectionNum: number,
+  sectionTitle: string,
+  scores: { q1: number; q2: number; q3: number; q4: number; q5: number },
+  total: number
+): string {
+  const names = SECTION_QUESTION_NAMES[sectionNum as keyof typeof SECTION_QUESTION_NAMES];
+  if (!names) return `Section ${sectionNum} (${sectionTitle}): ${total}/25 total`;
+  const parts = names.map((name, i) => {
+    const q = (["q1", "q2", "q3", "q4", "q5"] as const)[i];
+    return `${name}=${scores[q]}`;
+  });
+  return `Section ${sectionNum} (${sectionTitle}): ${parts.join(", ")} | total ${total}/25`;
+}
 
-  return `Generate personalized PDF report narratives for this MSP Channel Readiness Assessment. Write like an experienced channel consultant who has built 50 MSP programs, not a generic chatbot. Be specific and actionable.
+export function buildNarrativePrompt(data: NarrativeInput): string {
+  const lines: string[] = [
+    formatSectionScores(1, "MSP-Ready Product Architecture", data.s1, data.section1Total),
+    formatSectionScores(2, "Pricing & Partner Economics", data.s2, data.section2Total),
+    formatSectionScores(3, "Organizational & GTM Readiness", data.s3, data.section3Total),
+    formatSectionScores(4, "Partner Ecosystem & Recruitment", data.s4, data.section4Total),
+    formatSectionScores(5, "Enablement & Partner Experience", data.s5, data.section5Total),
+    formatSectionScores(6, "Competitive & Distribution Landscape", data.s6, data.section6Total),
+  ];
+  if (!data.section7Skipped && data.s7) {
+    lines.push(
+      formatSectionScores(7, "Existing MSP Channel Health", data.s7, data.section7Total ?? 0)
+    );
+  }
+
+  return `Generate a personalized executive assessment for this MSP Channel Readiness Assessment. Analyze every individual question score below. Identify 2-3 critical gaps (prioritize by impact), 1-2 genuine strengths from the data, and write section-specific insight without repeating yourself. Reference MSP ecosystem dynamics (Pax8, ConnectWise, IT Nation, PSA/RMM, partner activation, deal registration) and map their product category to MSP demand where relevant.
 
 ASSESSMENT DATA:
 - Company: ${data.companyName}
-- Product Category: ${data.productCategory} (tie this category to MSP demand: what MSPs buy, bundle, and care about in this space)
+- Product Category: ${data.productCategory}
 - Title of Person: ${data.title}
 - Overall Score: ${data.overallScore}/100
 - Readiness Tier: ${data.readinessTier}
 - Section 7 Skipped: ${data.section7Skipped} (true = greenfield, no existing MSP program)
 
-SECTION SCORES (each out of 25). Reference these by question name and score in your narrative (e.g., "Multi-Tenant Management scored 2," "Partner Margin Viability scored 4"):
-- Section 1 (MSP-Ready Product Architecture): ${data.section1Total}/25
-  Multi-Tenant Management=${data.s1.q1}, API & Integration Depth=${data.s1.q2}, Automated Provisioning=${data.s1.q3}, White-Label/Co-Brand=${data.s1.q4}, Client Reporting & Value Demonstration=${data.s1.q5}
-- Section 2 (Pricing & Partner Economics): ${data.section2Total}/25
-  MSP-Friendly Pricing Structure=${data.s2.q1}, Partner Margin Viability=${data.s2.q2}, Billing & Invoicing Flexibility=${data.s2.q3}, Recurring Revenue Alignment=${data.s2.q4}, Cost to Deliver=${data.s2.q5}
-- Section 3 (Organizational & GTM Readiness): ${data.section3Total}/25
-  Executive Commitment=${data.s3.q1}, Channel Conflict=${data.s3.q2}, Dedicated Resources=${data.s3.q3}, Roadmap Responsiveness=${data.s3.q4}, GTM Clarity=${data.s3.q5}
-- Section 4 (Partner Ecosystem & Recruitment): ${data.section4Total}/25
-  Category Demand=${data.s4.q1}, Distributors=${data.s4.q2}, Community Visibility=${data.s4.q3}, Existing Relationships=${data.s4.q4}, Competitive Advantage=${data.s4.q5}
-- Section 5 (Enablement & Partner Experience): ${data.section5Total}/25
-  Onboarding=${data.s5.q1}, Sales Enablement=${data.s5.q2}, Training/Cert=${data.s5.q3}, Partner Support=${data.s5.q4}, NFR/Demo=${data.s5.q5}
-- Section 6 (Competitive & Distribution Landscape): ${data.section6Total}/25
-  Competitor Programs=${data.s6.q1}, Distributor Gaps=${data.s6.q2}, Ecosystem Fit=${data.s6.q3}, MSP Differentiation=${data.s6.q4}, Market Timing=${data.s6.q5}
-${s7Block}
+INDIVIDUAL QUESTION SCORES (analyze every score; name specific questions in your narrative):
+${lines.map((line) => `- ${line}`).join("\n")}
 
 RED FLAGS DETECTED: ${data.redFlags.length > 0 ? data.redFlags.join("; ") : "None"}
 
-FINANCIAL DATA (you must reference their actual ARR and ACV in financial_commentary):
+FINANCIAL DATA (reference actual ARR and ACV in financial_commentary):
 - ARR: $${data.arr ?? "N/A"}
 - ACV: $${data.acv ?? "N/A"}
 - Customer Count: ${data.customerCount ?? "N/A"}
@@ -195,21 +208,21 @@ FINANCIAL DATA (you must reference their actual ARR and ACV in financial_comment
 Respond with ONLY valid JSON (no markdown, no backticks, no preamble) in this exact structure:
 
 {
-  "executive_summary": "At least 4 full sentences. What the overall score means, single biggest opportunity, single biggest blocker, one clear recommendation. Reference specific question names and product category.",
+  "executive_summary": "At least 4 full sentences. What the score means, single biggest opportunity, single biggest blocker, one clear recommendation. Reference specific question names and product category. End with exactly: Regardless of where you landed, the logical next step is a complimentary 90-minute deep-dive assessment with an expert who can uncover the nuances a self-assessment cannot. No cost, no obligation.",
   "section_interpretations": [
     {
       "section_number": 1,
       "section_name": "MSP-Ready Product Architecture",
-      "interpretation": "At least 3 sentences. Name specific questions and their scores (e.g., Multi-Tenant scored 2). Explain what that means for MSPs in operational terms.",
-      "recommendation": "One concrete, actionable recommendation (what to do, not vague advice)."
+      "interpretation": "At least 3 sentences. Name specific questions and scores. Explain operational impact for MSPs. No generic filler.",
+      "recommendation": "One concrete, actionable recommendation."
     }
   ],
-  "financial_commentary": "2-3 sentences that explicitly reference their ARR and ACV numbers. Ground the 3-year projections in their scale and category. Be conservative; label assumptions.",
-  "cost_of_delay_narrative": "2-3 sentences specific to their product category and competitive score. Why waiting has a real cost; reference category dynamics.",
-  "roadmap_narrative": "3-4 sentences. Which gaps to close first, in what order, realistic timeline. Reference named dimensions, not generic areas."
+  "financial_commentary": "2-3 sentences that explicitly reference their ARR and ACV. Ground projections in their scale and category. Conservative; label assumptions.",
+  "cost_of_delay_narrative": "2-3 sentences specific to their product category and competitive score. Reference category dynamics.",
+  "roadmap_narrative": "3-4 sentences. Which gaps to close first, in what order, realistic timeline. Reference named dimensions. Recommend the complimentary 90-minute deep-dive with an expert as the first step (no cost, no obligation)."
 }
 
-Include one object in section_interpretations for each of sections 1 through 6, and section 7 only if Section 7 Skipped is false. Use the exact section_name values: "MSP-Ready Product Architecture", "Pricing & Partner Economics", "Organizational & GTM Readiness", "Partner Ecosystem & Recruitment", "Enablement & Partner Experience", "Competitive & Distribution Landscape", "Existing MSP Channel Health". Every interpretation must be at least 3 sentences and name specific questions/scores; every recommendation must be concrete and actionable.`;
+Include one object in section_interpretations for each of sections 1 through 6, and section 7 only if Section 7 Skipped is false. Use the exact section_name values: "MSP-Ready Product Architecture", "Pricing & Partner Economics", "Organizational & GTM Readiness", "Partner Ecosystem & Recruitment", "Enablement & Partner Experience", "Competitive & Distribution Landscape", "Existing MSP Channel Health". Every interpretation must name specific questions/scores; every recommendation must be concrete and actionable. Do not repeat the same point across sections.`;
 }
 
 function sectionTier(total: number): "high" | "mid" | "low" {
@@ -278,17 +291,17 @@ export function generateFallbackNarrative(payload: {
     payload.computed.redFlags.length > 0
       ? "Critical gaps were identified that should be addressed before investing in partner recruitment. "
       : ""
-  }Focus on closing the highest-impact gaps first, then build your program design and recruitment plan. We recommend a phased approach based on your timeline.`;
+  }Focus on closing the highest-impact gaps first, then build your program design and recruitment plan. We recommend a phased approach based on your timeline. Regardless of where you landed, the logical next step is a complimentary 90-minute deep-dive assessment with an expert who can uncover the nuances a self-assessment cannot. No cost, no obligation.`;
   const financial_commentary = `Based on your ARR of $${payload.financials.arr ?? "N/A"} and ACV of $${payload.financials.acv ?? "N/A"}, the 3-year MSP revenue projections in this report use conservative assumptions. Your product category and readiness level influence how quickly you can ramp.`;
   const cost_of_delay_narrative = `Every quarter without an MSP channel has a real cost in higher acquisition spend and unrealized partner-sourced revenue. In ${payload.contact.productCategory ?? payload.financials.productCategory ?? "your category"}, competitors and distributors are moving now.`;
   const roadmap_narrative =
     tier === "ready"
-      ? "You are 3 to 4 months from a launch-ready program with the right playbook and recruitment plan."
+      ? "We recommend starting with a complimentary 90-minute deep-dive with an expert as your first step. After that, you are roughly 3 to 4 months from a launch-ready program with the right playbook and recruitment plan."
       : tier === "capable"
-        ? "Plan for 4 to 6 months to close targeted gaps and stand up program design and recruitment."
+        ? "We recommend starting with a complimentary 90-minute deep-dive with an expert as your first step. Then plan for 4 to 6 months to close targeted gaps and stand up program design and recruitment."
         : tier === "emerging"
-          ? "Expect 6 to 9 months of foundational work before scaling the channel."
-          : "Allow 12 or more months to address significant gaps before investing in partner recruitment.";
+          ? "We recommend starting with a complimentary 90-minute deep-dive with an expert as your first step. Expect 6 to 9 months of foundational work after that before scaling the channel."
+          : "We recommend starting with a complimentary 90-minute deep-dive with an expert as your first step. Allow 12 or more months after that to address significant gaps before investing in partner recruitment.";
   return {
     executive_summary,
     section_interpretations: sections,
@@ -321,7 +334,7 @@ export async function getNarrative(payload: Parameters<typeof payloadToNarrative
       anthropic.messages.create(
         {
           model: "claude-sonnet-4-20250514",
-          max_tokens: 4000,
+          max_tokens: 4500,
           system: SYSTEM_PROMPT,
           messages: [{ role: "user", content: prompt }],
         },

@@ -4,13 +4,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAssessmentStore } from "@/lib/store";
-import type { ExistingMspRelationships } from "@/types/assessment";
-
-const EXISTING_MSP_OPTIONS: { value: ExistingMspRelationships; label: string }[] = [
-  { value: "yes", label: "Yes" },
-  { value: "no", label: "No" },
-  { value: "not_sure", label: "Not sure" },
-];
 
 function parseCurrency(value: string): number | null {
   const cleaned = value.replace(/[,$\s]/g, "");
@@ -60,9 +53,6 @@ export function FinancialsForm() {
     if (customers === null || !Number.isInteger(customers) || customers < 0) {
       next.customerCount = "Enter number of customers";
     }
-    if (financials.existingMspRelationships === null || financials.existingMspRelationships === undefined) {
-      next.existingMspRelationships = "Please select an option";
-    }
     const salesCycle = financials.salesCycleDays;
     if (salesCycle != null && (salesCycle < 0 || !Number.isInteger(salesCycle))) {
       next.salesCycleDays = "Enter a valid number of days";
@@ -95,7 +85,7 @@ export function FinancialsForm() {
       directRevenuePct: financials.directRevenuePct,
       salesCycleDays: financials.salesCycleDays ?? 45,
       cac,
-      existingMspRelationships: financials.existingMspRelationships ?? "not_sure",
+      existingMspRelationships: financials.existingMspRelationships,
     });
     setComputed();
     router.push("/assessment/results");
@@ -223,37 +213,6 @@ export function FinancialsForm() {
           Benchmark if blank: (ARR × 15%) ÷ customers, minimum $5,000
         </p>
         {errors.cac && <p className="mt-1 text-sm text-red-500">{errors.cac}</p>}
-      </div>
-
-      <div>
-        <label className={labelBase}>
-          Do you have any existing MSP relationships today? <span className="text-red-500">*</span>
-        </label>
-        <div className="flex flex-wrap gap-4">
-          {EXISTING_MSP_OPTIONS.map((opt) => (
-            <label
-              key={opt.value}
-              className={`flex cursor-pointer items-center gap-2 rounded-lg border-2 px-4 py-3 transition ${
-                financials.existingMspRelationships === opt.value
-                  ? "border-[#1A8A7D] bg-[#1A8A7D]/10"
-                  : "border-gray-200 bg-white hover:border-gray-300"
-              }`}
-            >
-              <input
-                type="radio"
-                name="existingMsp"
-                value={opt.value}
-                checked={financials.existingMspRelationships === opt.value}
-                onChange={() => setFinancials({ existingMspRelationships: opt.value })}
-                className="sr-only"
-              />
-              <span className="text-sm font-medium text-[#1B3A5C]">{opt.label}</span>
-            </label>
-          ))}
-        </div>
-        {errors.existingMspRelationships && (
-          <p className="mt-1 text-sm text-red-500">{errors.existingMspRelationships}</p>
-        )}
       </div>
 
       <div className="mt-4 flex flex-row flex-wrap justify-between gap-4">
