@@ -114,7 +114,7 @@ export async function GET(
   try {
     const payload = rowToBuildPDFPayload(row as AssessmentRow);
     const buffer = await renderAssessmentPDF(payload);
-    const filename = `MSP-Readiness-${row.company_name.replace(/[^a-zA-Z0-9]/g, "-")}.pdf`;
+    const filename = `MSP-Readiness-${payload.contact.companyName.replace(/[^a-zA-Z0-9]/g, "-")}.pdf`;
 
     return new NextResponse(buffer, {
       status: 200,
