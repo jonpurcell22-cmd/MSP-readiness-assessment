@@ -5,15 +5,19 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAssessmentStore } from "@/lib/store";
 import { ASSESSMENT_SECTION_ROUTES } from "@/lib/constants";
-import type { AssessmentSectionConfig, AssessmentQuestionOption } from "@/types/assessment";
+import type {
+  AssessmentSectionConfig,
+  AssessmentQuestionOption,
+  SectionScores,
+} from "@/types/assessment";
 
 const TOTAL_SECTIONS = 7;
 const QUESTIONS_PER_SECTION = 5;
 
-function isSectionComplete(sectionScores: Record<string, number> | null): boolean {
+function isSectionComplete(sectionScores: SectionScores | null): boolean {
   if (!sectionScores) return false;
-  for (let q = 1; q <= QUESTIONS_PER_SECTION; q++) {
-    const key = `q${q}` as keyof typeof sectionScores;
+  const keys: (keyof SectionScores)[] = ["q1", "q2", "q3", "q4", "q5"];
+  for (const key of keys) {
     const value = sectionScores[key];
     if (value == null || value < 1 || value > 5) return false;
   }

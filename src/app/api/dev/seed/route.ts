@@ -100,7 +100,8 @@ export async function POST() {
     const supabase = getServerSupabase();
     const { data, error } = await supabase
       .from("assessments")
-      .insert(TEST_ASSESSMENTS)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase client infers insert as never
+.insert(TEST_ASSESSMENTS as any)
       .select("id, email, company_name, overall_score, readiness_tier");
 
     if (error) {

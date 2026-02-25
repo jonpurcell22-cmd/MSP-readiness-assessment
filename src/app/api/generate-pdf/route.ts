@@ -21,7 +21,7 @@ export async function POST(request: Request) {
 
     const buffer = await renderAssessmentPDF(body);
 
-    return new NextResponse(buffer, {
+    return new NextResponse(new Uint8Array(buffer), {
       status: 200,
       headers: {
         "Content-Type": "application/pdf",

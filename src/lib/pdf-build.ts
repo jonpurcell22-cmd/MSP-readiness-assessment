@@ -128,7 +128,7 @@ export function buildPDFData(payload: BuildPDFPayload): PDFData {
     readinessTier: computed.readinessTier,
     sectionTotals: computed.sectionTotals,
     section7Skipped: computed.section7Skipped,
-    sectionScores: sectionScoresList,
+    sectionScores: sectionScoresList as PDFData["sectionScores"],
     sectionQuestionDetails,
     redFlags: computed.redFlags,
     narrative,
@@ -145,6 +145,7 @@ export async function renderAssessmentPDF(payload: BuildPDFPayload): Promise<Buf
   await ensureLogosLoaded();
   const pdfData = buildPDFData(payload);
   const doc = React.createElement(AssessmentPDFDocument, { data: pdfData });
-  const buffer = await renderToBuffer(doc);
+  type DocumentProps = import("@react-pdf/renderer").DocumentProps;
+  const buffer = await renderToBuffer(doc as unknown as React.ReactElement<DocumentProps>);
   return Buffer.from(buffer);
 }

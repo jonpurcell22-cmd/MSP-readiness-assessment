@@ -101,16 +101,17 @@ export async function POST(request: Request) {
     const row = payloadToRow(payload);
     const supabase = getServerSupabase();
 
-    const { data, error } = await supabase
+    const { data: rawData, error } = await supabase
       .from("assessments")
-      .insert(row)
+      .insert(row as any)
       .select("id, created_at")
       .single();
+    const data = rawData as { id: string; created_at: string } | null;
 
-    if (error) {
+    if (error || !data) {
       console.error("Supabase insert error:", error);
       return NextResponse.json(
-        { error: error.message || "Failed to save assessment" },
+        { error: error?.message || "Failed to save assessment" },
         { status: 500 }
       );
     }
@@ -118,7 +119,7 @@ export async function POST(request: Request) {
     const narrative = await getNarrative(payload);
     const { error: updateError } = await supabase
       .from("assessments")
-      .update({ ai_narrative: narrative })
+      .update({ ai_narrative: narrative } as never)
       .eq("id", data.id);
     if (updateError) {
       console.error("Failed to store narrative:", updateError);

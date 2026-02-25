@@ -26,7 +26,7 @@ export async function POST(request: Request) {
       const supabase = getServerSupabase();
       const { error } = await supabase
         .from("assessments")
-        .update({ ai_narrative: narrative })
+        .update({ ai_narrative: narrative } as never)
         .eq("id", assessmentId);
       if (error) {
         console.error("Failed to store narrative:", error);

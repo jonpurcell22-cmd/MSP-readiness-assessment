@@ -107,7 +107,7 @@ Financial Data:
 - Existing MSP Relationships: ${f.existingMspRelationships ?? "N/A"}
 
 Scores:
-- Overall: ${payload.computed.overallScore}/100 (${TIER_LABELS[payload.computed.readinessTier]})
+- Overall: ${payload.computed.overallScore}/100 (${TIER_LABELS[payload.computed.readinessTier as ReadinessTier]})
 - Section 1 (Product): ${t.section1}/25
 - Section 2 (Pricing): ${t.section2}/25
 - Section 3 (Organization): ${t.section3}/25
