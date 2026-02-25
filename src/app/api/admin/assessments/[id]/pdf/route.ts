@@ -116,7 +116,7 @@ export async function GET(
     const buffer = await renderAssessmentPDF(payload);
     const filename = `MSP-Readiness-${payload.contact.companyName.replace(/[^a-zA-Z0-9]/g, "-")}.pdf`;
 
-    return new NextResponse(buffer, {
+    return new NextResponse(new Uint8Array(buffer), {
       status: 200,
       headers: {
         "Content-Type": "application/pdf",
