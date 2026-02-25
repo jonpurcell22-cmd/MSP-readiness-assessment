@@ -1,9 +1,9 @@
 /**
- * Send assessment emails via Resend: user (with PDF) and admin (with contact/scores + PDF).
+ * Send assessment emails via SendGrid: user (with PDF) and admin (with contact/scores + PDF).
  * Matches EMAIL TEMPLATES in the spec.
  */
 
-import { Resend } from "resend";
+import sgMail from "@sendgrid/mail";
 import { TIER_LABELS, TIER_INTERPRETATIONS } from "@/lib/scoring";
 import type { ReadinessTier } from "@/types/assessment";
 import type { NarrativeOutput } from "@/lib/narrative";
@@ -45,8 +45,7 @@ export interface AssessmentEmailPayload {
   };
 }
 
-// Temporary: Resend default domain until custom domain is verified
-const FROM = "Jon Purcell <onboarding@resend.dev>";
+const FROM = "Jon Purcell <jon@untappedchannelstrategy.com>";
 const REPLY_TO = "jon@untappedchannelstrategy.com";
 const ADMIN_EMAIL = "jon@untappedchannelstrategy.com";
 
@@ -132,7 +131,7 @@ export interface SendAssessmentEmailsParams {
 
 /**
  * Send both user and admin emails with the PDF attached.
- * Requires RESEND_API_KEY. If missing or send fails, throws.
+ * Requires SENDGRID_API_KEY. If missing or send fails, throws.
  */
 export async function sendAssessmentEmails({
   payload,
@@ -146,51 +145,75 @@ export async function sendAssessmentEmails({
     console.warn("[send-emails] No PDF buffer; sending emails without attachment.");
   }
 
-  const apiKey = process.env.RESEND_API_KEY;
+  const apiKey = process.env.SENDGRID_API_KEY;
   if (!apiKey) {
-    throw new Error("RESEND_API_KEY is not set. Add it to .env.local.");
+    throw new Error("SENDGRID_API_KEY is not set. Add it to .env.local.");
   }
 
-  const resend = new Resend(apiKey);
+  sgMail.setApiKey(apiKey);
+
   const tier = payload.computed.readinessTier as ReadinessTier;
   const tierLabel = TIER_LABELS[tier];
   const tierSummary = TIER_INTERPRETATIONS[tier];
   const subjectUser = `Your MSP Channel Readiness Assessment Results: ${payload.computed.overallScore}/100 - ${tierLabel}`;
   const subjectAdmin = `New Assessment: ${payload.contact.companyName} - ${payload.computed.overallScore}/100 (${tierLabel})`;
   const pdfFilename = `MSP-Readiness-${payload.contact.companyName.replace(/[^a-zA-Z0-9]/g, "-")}.pdf`;
-  const attachments = hasPdf ? [{ filename: pdfFilename, content: pdfBuffer }] : undefined;
 
-  const [userResult, adminResult] = await Promise.all([
-    resend.emails.send({
-      from: FROM,
-      reply_to: REPLY_TO,
-      to: payload.contact.email,
-      subject: subjectUser,
-      text: buildUserEmailBody(payload, tierLabel, tierSummary, bookingUrl),
-      ...(attachments && { attachments }),
-    }),
-    resend.emails.send({
-      from: FROM,
-      reply_to: REPLY_TO,
-      to: ADMIN_EMAIL,
-      subject: subjectAdmin,
-      text: buildAdminEmailBody(payload, new Date().toISOString()),
-      ...(attachments && { attachments }),
-    }),
-  ]);
+  const attachment = hasPdf
+    ? [
+        {
+          content: pdfBuffer.toString("base64"),
+          filename: pdfFilename,
+          type: "application/pdf" as const,
+          disposition: "attachment" as const,
+        },
+      ]
+    : undefined;
 
-  if (userResult.error) {
-    console.error("[send-emails] User email failed:", userResult.error);
-    throw new Error(`User email failed: ${userResult.error.message}`);
-  }
-  if (adminResult.error) {
-    console.error("[send-emails] Admin email failed:", adminResult.error);
-    throw new Error(`Admin email failed: ${adminResult.error.message}`);
-  }
-  console.log("[send-emails] Sent OK. User id:", userResult.data?.id, "Admin id:", adminResult.data?.id);
-
-  return {
-    userId: userResult.data?.id,
-    adminId: adminResult.data?.id,
+  const userMsg = {
+    to: payload.contact.email,
+    from: FROM,
+    replyTo: REPLY_TO,
+    subject: subjectUser,
+    text: buildUserEmailBody(payload, tierLabel, tierSummary, bookingUrl),
+    ...(attachment && { attachments: attachment }),
   };
+
+  const adminMsg = {
+    to: ADMIN_EMAIL,
+    from: FROM,
+    replyTo: REPLY_TO,
+    subject: subjectAdmin,
+    text: buildAdminEmailBody(payload, new Date().toISOString()),
+    ...(attachment && { attachments: attachment }),
+  };
+
+  try {
+    const [userResult, adminResult] = await Promise.all([
+      sgMail.send(userMsg),
+      sgMail.send(adminMsg),
+    ]);
+    const [userResponse, adminResponse] = [userResult[0], adminResult[0]];
+
+    const userStatus = userResponse?.statusCode ?? "?";
+    const adminStatus = adminResponse?.statusCode ?? "?";
+    console.log("[send-emails] SendGrid user status:", userStatus, "admin status:", adminStatus);
+
+    if (userStatus !== 202 || adminStatus !== 202) {
+      console.error("[send-emails] Unexpected status. User:", userResponse, "Admin:", adminResponse);
+      throw new Error(`SendGrid returned user=${userStatus} admin=${adminStatus}`);
+    }
+
+    const userId = (userResponse?.headers as Record<string, string>)?.["x-message-id"];
+    const adminId = (adminResponse?.headers as Record<string, string>)?.["x-message-id"];
+    return { userId, adminId };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("[send-emails] Send failed:", message);
+    if (err && typeof err === "object" && "response" in err) {
+      const res = (err as { response?: { body?: unknown; statusCode?: number } }).response;
+      if (res) console.error("[send-emails] SendGrid response:", res.statusCode, res.body);
+    }
+    throw new Error(`Email send failed: ${message}`);
+  }
 }

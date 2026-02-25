@@ -37,7 +37,7 @@ Build a full-stack web application called the **MSP Channel Readiness Assessment
 - **Styling:** Tailwind CSS
 - **State Management:** Zustand (for assessment form state that persists across routes)
 - **Database:** Supabase (PostgreSQL) for storing submissions
-- **Email:** Resend (for sending PDF reports to user and admin)
+- **Email:** SendGrid (for sending PDF reports to user and admin)
 - **PDF Generation:** @react-pdf/renderer (server-side PDF generation)
 - **Auth:** Simple password-protected admin route (no full auth system needed, just a shared secret/env variable)
 - **Deployment:** Vercel
@@ -788,7 +788,7 @@ CREATE TABLE assessments (
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
-RESEND_API_KEY=
+SENDGRID_API_KEY=
 ANTHROPIC_API_KEY=
 ADMIN_PASSWORD=
 BOOKING_URL=
@@ -1031,6 +1031,6 @@ Build in this sequence to get a working app fastest:
 9. **PDF generation** with @react-pdf/renderer using fallback/template narratives first
 10. **AI narrative generation** via Claude API (/api/generate-narrative route), with fallback function
 11. **Wire AI narratives into PDF** (replace template text with AI-generated content)
-12. **Email integration** with Resend (user email + admin email with PDF)
+12. **Email integration** with SendGrid (user email + admin email with PDF)
 13. **Admin dashboard** with password auth
 14. **Polish:** animations, loading states, mobile responsiveness, edge cases

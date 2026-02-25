@@ -125,27 +125,31 @@ export async function POST(request: Request) {
       // Still return success; assessment was saved
     }
 
-    // Return success as soon as DB is updated so user never sees "couldn't save" for PDF/email failures
-    const response = NextResponse.json({ id: data.id, created_at: data.created_at, narrative });
+    // Generate PDF and send emails before returning so they run reliably in serverless (no background kill).
+    // Send emails even if PDF fails (without attachment).
+    let pdfBuffer: Buffer | undefined;
+    try {
+      pdfBuffer = await renderAssessmentPDF({ ...payload, narrative });
+    } catch (pdfErr) {
+      console.error("[submit] PDF generation failed:", pdfErr);
+      console.error("[submit] Error details:", pdfErr instanceof Error ? pdfErr.message : String(pdfErr));
+    }
+    let emailSent = true;
+    try {
+      await sendAssessmentEmails({ payload, narrative, pdfBuffer });
+    } catch (emailErr) {
+      console.error("[submit] Email send failed:", emailErr);
+      console.error("[submit] Error details:", emailErr instanceof Error ? emailErr.message : String(emailErr));
+      emailSent = false;
+      // Still return 200 with narrative so the user sees their AI summary; client can show "email not sent" warning
+    }
 
-    // Generate PDF and send emails in background. Send emails even if PDF fails (without attachment).
-    void (async () => {
-      let pdfBuffer: Buffer | undefined;
-      try {
-        pdfBuffer = await renderAssessmentPDF({ ...payload, narrative });
-      } catch (pdfErr) {
-        console.error("[submit] PDF generation failed:", pdfErr);
-        console.error("[submit] Error details:", pdfErr instanceof Error ? pdfErr.message : String(pdfErr));
-      }
-      try {
-        await sendAssessmentEmails({ payload, narrative, pdfBuffer });
-      } catch (emailErr) {
-        console.error("[submit] Email send failed:", emailErr);
-        console.error("[submit] Error details:", emailErr instanceof Error ? emailErr.message : String(emailErr));
-      }
-    })();
-
-    return response;
+    return NextResponse.json({
+      id: data.id,
+      created_at: data.created_at,
+      narrative,
+      emailSent,
+    });
   } catch (e) {
     console.error("Submit API error:", e);
     return NextResponse.json(

@@ -55,6 +55,7 @@ export function ResultsTeaser() {
   const [submitStatus, setSubmitStatus] = useState<SubmitStatus>("idle");
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [narrative, setNarrative] = useState<NarrativeOutput | null>(null);
+  const [emailSent, setEmailSent] = useState<boolean>(true);
   const submitAttempted = useRef(false);
 
   // Ensure we have computed results (e.g. user landed here via direct URL)
@@ -99,6 +100,7 @@ export function ResultsTeaser() {
         setSubmitError(null);
         setSubmitStatus("success");
         if (data.narrative?.executive_summary) setNarrative(data.narrative);
+        setEmailSent(data.emailSent !== false);
       })
       .catch((err) => {
         console.error("Submit failed:", err);
@@ -399,9 +401,21 @@ export function ResultsTeaser() {
             </div>
           )}
           {submitStatus === "success" && (
-            <p className="text-center text-[#1B3A5C]">
-              Your full report has been sent to <strong>{contact.email}</strong>. Check your inbox for a detailed breakdown with financial projections and a customized roadmap.
-            </p>
+            <>
+              <p className="text-center text-[#1B3A5C]">
+                {emailSent ? (
+                  <>Your full report has been sent to <strong>{contact.email}</strong>. Check your inbox for a detailed breakdown with financial projections and a customized roadmap.</>
+                ) : (
+                  <>Your results are saved. We couldn&apos;t send the email right now; we&apos;ll follow up at <strong>{contact.email}</strong>.</>
+                )}
+              </p>
+              {!emailSent && (
+                <p className="mt-2 text-center text-sm text-amber-700">
+                  Check spam or contact{" "}
+                  <a href="mailto:jon@untappedchannelstrategy.com" className="text-[#1A8A7D] hover:underline">jon@untappedchannelstrategy.com</a> if you need your report.
+                </p>
+              )}
+            </>
           )}
           {(submitStatus === "success" || submitStatus === "loading") && (
             <>
