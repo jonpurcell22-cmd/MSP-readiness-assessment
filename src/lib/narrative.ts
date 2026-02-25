@@ -20,6 +20,19 @@ export interface NarrativeOutput {
   roadmap_narrative: string;
 }
 
+/** Type guard for DB/stored JSON that may be NarrativeOutput. */
+export function isNarrativeOutput(value: unknown): value is NarrativeOutput {
+  if (!value || typeof value !== "object") return false;
+  const o = value as Record<string, unknown>;
+  return (
+    typeof o.executive_summary === "string" &&
+    Array.isArray(o.section_interpretations) &&
+    typeof o.financial_commentary === "string" &&
+    typeof o.cost_of_delay_narrative === "string" &&
+    typeof o.roadmap_narrative === "string"
+  );
+}
+
 const SECTION_NAMES: Record<number, string> = {
   1: "MSP-Ready Product Architecture",
   2: "Pricing & Partner Economics",

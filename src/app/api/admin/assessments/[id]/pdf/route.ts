@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSupabase } from "@/lib/supabase";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
 import { renderAssessmentPDF } from "@/lib/pdf-build";
-import { generateFallbackNarrative } from "@/lib/narrative";
+import { generateFallbackNarrative, isNarrativeOutput } from "@/lib/narrative";
 import type { NarrativeOutput } from "@/lib/narrative";
 import type { BuildPDFPayload } from "@/lib/pdf-build";
 import type { SectionScores } from "@/types/assessment";
@@ -22,10 +22,9 @@ function toSectionScores(row: Record<string, number> | null): SectionScores | nu
 }
 
 function rowToBuildPDFPayload(row: AssessmentRow): BuildPDFPayload {
-  const narrative: NarrativeOutput =
-    row.ai_narrative && typeof row.ai_narrative === "object" && "executive_summary" in row.ai_narrative
-      ? (row.ai_narrative as NarrativeOutput)
-      : generateFallbackNarrative({
+  const narrative: NarrativeOutput = isNarrativeOutput(row.ai_narrative)
+    ? row.ai_narrative
+    : generateFallbackNarrative({
           contact: { companyName: row.company_name, productCategory: row.product_category as never },
           computed: {
             overallScore: row.overall_score ?? 0,
