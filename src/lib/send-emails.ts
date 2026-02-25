@@ -45,7 +45,9 @@ export interface AssessmentEmailPayload {
   };
 }
 
-const FROM = "Jon Purcell <jon@untappedchannelstrategy.com>";
+// Temporary: Resend default domain until custom domain is verified
+const FROM = "Jon Purcell <onboarding@resend.dev>";
+const REPLY_TO = "jon@untappedchannelstrategy.com";
 const ADMIN_EMAIL = "jon@untappedchannelstrategy.com";
 
 function getFirstName(fullName: string): string {
@@ -123,7 +125,8 @@ Submitted: ${submittedAt}`;
 export interface SendAssessmentEmailsParams {
   payload: AssessmentEmailPayload;
   narrative: NarrativeOutput;
-  pdfBuffer: Buffer;
+  /** Optional; when missing (e.g. PDF generation failed), emails are sent without attachment */
+  pdfBuffer?: Buffer | null;
   bookingUrl?: string;
 }
 
@@ -135,11 +138,17 @@ export async function sendAssessmentEmails({
   payload,
   narrative,
   pdfBuffer,
-  bookingUrl = process.env.NEXT_PUBLIC_BOOKING_URL || process.env.BOOKING_URL || "",
+  bookingUrl = process.env.NEXT_PUBLIC_BOOKING_URL || process.env.BOOKING_URL || "https://calendly.com/jon-untappedchannelstrategy",
 }: SendAssessmentEmailsParams): Promise<{ userId?: string; adminId?: string }> {
+  console.log("[send-emails] Starting... to:", payload.contact.email);
+  const hasPdf = pdfBuffer && pdfBuffer.length > 0;
+  if (!hasPdf) {
+    console.warn("[send-emails] No PDF buffer; sending emails without attachment.");
+  }
+
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
-    throw new Error("RESEND_API_KEY is not set");
+    throw new Error("RESEND_API_KEY is not set. Add it to .env.local.");
   }
 
   const resend = new Resend(apiKey);
@@ -149,28 +158,36 @@ export async function sendAssessmentEmails({
   const subjectUser = `Your MSP Channel Readiness Assessment Results: ${payload.computed.overallScore}/100 - ${tierLabel}`;
   const subjectAdmin = `New Assessment: ${payload.contact.companyName} - ${payload.computed.overallScore}/100 (${tierLabel})`;
   const pdfFilename = `MSP-Readiness-${payload.contact.companyName.replace(/[^a-zA-Z0-9]/g, "-")}.pdf`;
-  const attachment = { filename: pdfFilename, content: pdfBuffer };
-  const submittedAt = new Date().toISOString();
+  const attachments = hasPdf ? [{ filename: pdfFilename, content: pdfBuffer }] : undefined;
 
   const [userResult, adminResult] = await Promise.all([
     resend.emails.send({
       from: FROM,
+      reply_to: REPLY_TO,
       to: payload.contact.email,
       subject: subjectUser,
       text: buildUserEmailBody(payload, tierLabel, tierSummary, bookingUrl),
-      attachments: [attachment],
+      ...(attachments && { attachments }),
     }),
     resend.emails.send({
       from: FROM,
+      reply_to: REPLY_TO,
       to: ADMIN_EMAIL,
       subject: subjectAdmin,
-      text: buildAdminEmailBody(payload, submittedAt),
-      attachments: [attachment],
+      text: buildAdminEmailBody(payload, new Date().toISOString()),
+      ...(attachments && { attachments }),
     }),
   ]);
 
-  if (userResult.error) throw new Error(`User email failed: ${userResult.error.message}`);
-  if (adminResult.error) throw new Error(`Admin email failed: ${adminResult.error.message}`);
+  if (userResult.error) {
+    console.error("[send-emails] User email failed:", userResult.error);
+    throw new Error(`User email failed: ${userResult.error.message}`);
+  }
+  if (adminResult.error) {
+    console.error("[send-emails] Admin email failed:", adminResult.error);
+    throw new Error(`Admin email failed: ${adminResult.error.message}`);
+  }
+  console.log("[send-emails] Sent OK. User id:", userResult.data?.id, "Admin id:", adminResult.data?.id);
 
   return {
     userId: userResult.data?.id,

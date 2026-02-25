@@ -8,7 +8,7 @@ export const sectionOrganizationConfig: AssessmentSectionConfig = {
   questions: [
     {
       name: "Executive Commitment",
-      context: "MSP programs take 12-18 months to produce meaningful revenue. If leadership expects ROI in one quarter, the program will be killed before it has a chance.",
+      context: "MSP programs take 18-24 months to produce meaningful revenue. Leadership must be ready for a long-term commitment.",
       questionKey: "q1",
       options: [
         { score: 1, shortLabel: "No executive awareness or interest, not on the roadmap", fullDescription: "No executive awareness or interest, not on the roadmap. Program would be a side project." },
@@ -20,7 +20,7 @@ export const sectionOrganizationConfig: AssessmentSectionConfig = {
     },
     {
       name: "Channel Conflict Readiness",
-      context: "When a direct rep works a prospect and an MSP registers the same deal, someone has to lose. If you haven't designed for this, your direct team will kill your MSP program from the inside.",
+      context: "When both a direct seller and an MSP engage the same opportunity, clear rules of engagement are essential. Without intentional design, internal friction can undermine confidence in the MSP program.",
       questionKey: "q2",
       options: [
         { score: 1, shortLabel: "No conflict rules, direct reps compensated on all revenue including partner-sourced, no deal registration", fullDescription: "No conflict rules, direct reps compensated on all revenue including partner-sourced, no deal registration. Partners will lose every time." },
@@ -32,7 +32,7 @@ export const sectionOrganizationConfig: AssessmentSectionConfig = {
     },
     {
       name: "Dedicated Channel Resources",
-      context: "A partner program run as a side project by someone who also manages direct sales will fail. Full stop.",
+      context: "A partner program run as a side project by someone who also manages direct sales is likely to fail.",
       questionKey: "q3",
       options: [
         { score: 1, shortLabel: "No one owns the partner channel, would be added to existing role", fullDescription: "No one owns the partner channel, would be added to existing role. No ownership." },
@@ -44,7 +44,7 @@ export const sectionOrganizationConfig: AssessmentSectionConfig = {
     },
     {
       name: "Product Roadmap Responsiveness",
-      context: "MSPs will surface product needs you've never heard from direct customers. If your product team ignores partner feedback, MSPs leave.",
+      context: "MSPs will surface product needs you've never heard from direct customers. Being prepared to address them is crucial.",
       questionKey: "q4",
       options: [
         { score: 1, shortLabel: "Roadmap driven entirely by direct customer and internal priorities, no partner input mechanism", fullDescription: "Roadmap driven entirely by direct customer and internal priorities, no partner input mechanism. Partners invisible to product." },
@@ -56,7 +56,7 @@ export const sectionOrganizationConfig: AssessmentSectionConfig = {
     },
     {
       name: "Go-to-Market Clarity",
-      context: "'We'll sell through MSPs' is not a strategy. You need a defined ideal partner profile, a distinct MSP value proposition, and a clear understanding of how MSP distribution differs from direct.",
+      context: "A defined ideal partner profile, a distinct MSP value proposition, and a clear understanding of how MSP GTM motions differ from direct.",
       questionKey: "q5",
       options: [
         { score: 1, shortLabel: "No MSP-specific GTM thinking, we'll figure it out", fullDescription: "No MSP-specific GTM thinking, we'll figure it out. No strategy." },

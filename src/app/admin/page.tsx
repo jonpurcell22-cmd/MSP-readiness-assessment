@@ -92,6 +92,7 @@ export default function AdminPage() {
   const [search, setSearch] = useState("");
   const [pdfLoadingId, setPdfLoadingId] = useState<string | null>(null);
   const [pdfError, setPdfError] = useState<string | null>(null);
+  const [testPdfLoading, setTestPdfLoading] = useState(false);
 
   const fetchAssessments = useCallback(async () => {
     setLoading(true);
@@ -150,6 +151,32 @@ export default function AdminPage() {
           r.full_name?.toLowerCase().includes(search.toLowerCase())
       )
     : assessments;
+
+  const handleTestPdf = async () => {
+    setPdfError(null);
+    setTestPdfLoading(true);
+    try {
+      const res = await fetch("/api/admin/test-pdf", { credentials: "include" });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        const msg = (body as { error?: string })?.error ?? res.statusText;
+        setPdfError(`${res.status}: ${msg}`);
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = res.headers.get("Content-Disposition")?.match(/filename="?([^";]+)"?/)?.[1] ?? "MSP-Readiness-TEST.pdf";
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setPdfError(err instanceof Error ? err.message : "Failed to generate test PDF");
+      console.error(err);
+    } finally {
+      setTestPdfLoading(false);
+    }
+  };
 
   const handlePdf = async (id: string, action: "view" | "download") => {
     setPdfError(null);
@@ -245,6 +272,14 @@ export default function AdminPage() {
               className="rounded-lg border border-[#1B3A5C]/30 bg-white px-4 py-2 text-sm font-medium text-[#1B3A5C] hover:bg-[#1B3A5C]/5"
             >
               Export CSV
+            </button>
+            <button
+              type="button"
+              onClick={handleTestPdf}
+              disabled={testPdfLoading}
+              className="rounded-lg border border-[#1A8A7D] bg-[#1A8A7D] px-4 py-2 text-sm font-medium text-white hover:bg-[#157a6e] disabled:opacity-50"
+            >
+              {testPdfLoading ? "Generating…" : "Generate test PDF"}
             </button>
             <button
               type="button"

@@ -10,6 +10,7 @@ interface SendEmailsBody extends SubmitPayload {
 }
 
 export async function POST(request: Request) {
+  console.log("Email API route hit");
   try {
     const body = (await request.json()) as SendEmailsBody;
 

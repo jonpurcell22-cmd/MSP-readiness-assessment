@@ -34,7 +34,7 @@ const SECTION_LABELS: Record<number, string> = {
   7: "Channel Health",
 };
 
-const BOOKING_URL = process.env.NEXT_PUBLIC_BOOKING_URL || "#";
+const BOOKING_URL = process.env.NEXT_PUBLIC_BOOKING_URL || "https://calendly.com/jon-untappedchannelstrategy";
 
 type SubmitStatus = "idle" | "loading" | "success" | "error";
 

@@ -128,13 +128,20 @@ export async function POST(request: Request) {
     // Return success as soon as DB is updated so user never sees "couldn't save" for PDF/email failures
     const response = NextResponse.json({ id: data.id, created_at: data.created_at, narrative });
 
-    // Generate PDF and send emails in background; do not fail the request if these throw
+    // Generate PDF and send emails in background. Send emails even if PDF fails (without attachment).
     void (async () => {
+      let pdfBuffer: Buffer | undefined;
       try {
-        const pdfBuffer = await renderAssessmentPDF({ ...payload, narrative });
+        pdfBuffer = await renderAssessmentPDF({ ...payload, narrative });
+      } catch (pdfErr) {
+        console.error("[submit] PDF generation failed:", pdfErr);
+        console.error("[submit] Error details:", pdfErr instanceof Error ? pdfErr.message : String(pdfErr));
+      }
+      try {
         await sendAssessmentEmails({ payload, narrative, pdfBuffer });
-      } catch (err) {
-        console.error("PDF or email failed after save:", err);
+      } catch (emailErr) {
+        console.error("[submit] Email send failed:", emailErr);
+        console.error("[submit] Error details:", emailErr instanceof Error ? emailErr.message : String(emailErr));
       }
     })();
 

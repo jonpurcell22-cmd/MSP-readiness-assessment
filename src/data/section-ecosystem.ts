@@ -4,7 +4,7 @@ export const sectionEcosystemConfig: AssessmentSectionConfig = {
   sectionKey: "section4",
   sectionNumber: 4,
   title: "Partner Ecosystem & Recruitment",
-  description: "There are 40,000+ MSPs in North America. The question isn't whether they exist. It's whether they'll pick you.",
+  description: "Do you have a defined ICP? Do you know what markets you want to address?",
   questions: [
     {
       name: "Category Demand from MSPs",
@@ -20,7 +20,7 @@ export const sectionEcosystemConfig: AssessmentSectionConfig = {
     },
     {
       name: "Distributor Relationship Status",
-      context: "Pax8, Ingram Micro Cloud, and TD SYNNEX are the highways to MSP distribution. If you're not on them, you're asking every MSP to take a detour.",
+      context: "Distribution can be a growth multiplier, but speed, structure and being prepared are necessary for success.",
       questionKey: "q2",
       options: [
         { score: 1, shortLabel: "No distributor relationships, haven't explored it", fullDescription: "No distributor relationships, haven't explored it. Off the highway." },
@@ -32,7 +32,7 @@ export const sectionEcosystemConfig: AssessmentSectionConfig = {
     },
     {
       name: "MSP Community Visibility",
-      context: "MSPs talk to each other constantly. If they've never heard of you, your first conversation starts at zero credibility.",
+      context: "Do you have a presence in the MSP community yet? If not, there will be some legwork to do.",
       questionKey: "q3",
       options: [
         { score: 1, shortLabel: "No presence in MSP communities, never attended or exhibited at MSP event", fullDescription: "No presence in MSP communities, never attended or exhibited at MSP event. Unknown." },
@@ -56,7 +56,7 @@ export const sectionEcosystemConfig: AssessmentSectionConfig = {
     },
     {
       name: "Competitive Recruitment Advantage",
-      context: "MSPs already have a vendor in your category. To win them, you need a clear why switch story.",
+      context: "MSPs already have a vendor in your category. To win them, you need a clear use case and differentiator.",
       questionKey: "q5",
       options: [
         { score: 1, shortLabel: "No clear differentiation for MSPs vs. incumbent, we're a good product isn't enough", fullDescription: "No clear differentiation for MSPs vs. incumbent, we're a good product isn't enough. No switch story." },

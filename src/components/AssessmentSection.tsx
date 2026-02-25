@@ -53,7 +53,7 @@ export function AssessmentSection({ config }: { config: AssessmentSectionConfig 
 
   return (
     <main className="min-h-screen bg-[#F4F7FA] px-4 py-8 sm:px-6 sm:py-10">
-      <div className="mx-auto max-w-3xl">
+      <div className="mx-auto max-w-5xl">
         {/* Progress */}
         <div className="mb-8">
           <p className="text-sm font-medium text-[#1B3A5C]/80">
@@ -155,7 +155,7 @@ function QuestionBlock({
     >
       <h2 className="text-lg font-semibold text-[#1B3A5C]">{question.name}</h2>
       <p className="mt-1 text-sm text-[#1B3A5C]/70">{question.context}</p>
-      <div className="mt-4 grid gap-3 sm:grid-cols-5">
+      <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-5 sm:min-w-0">
         {question.options.map((option) => (
           <OptionCard
             key={option.score}
@@ -183,7 +183,7 @@ function OptionCard({
 }) {
   return (
     <label
-      className={`relative cursor-pointer rounded-lg border-2 p-4 transition-all ${
+      className={`relative flex min-w-0 cursor-pointer flex-col rounded-lg border-2 p-4 transition-all min-[480px]:min-w-[140px] ${
         selected
           ? "border-[#1A8A7D] bg-[#1A8A7D]/10 ring-2 ring-[#1A8A7D]/30"
           : "border-gray-200 bg-gray-50/50 hover:border-gray-300 hover:bg-gray-50"
@@ -198,17 +198,9 @@ function OptionCard({
         className="sr-only"
       />
       <span className="text-sm font-semibold text-[#1B3A5C]">{option.score}</span>
-      <p className="mt-1.5 text-sm leading-snug text-[#1B3A5C]/90">
+      <p className="mt-1.5 break-words text-sm leading-snug text-[#1B3A5C]/90">
         {option.shortLabel}
       </p>
-      <details className="mt-2">
-        <summary className="cursor-pointer text-xs font-medium text-[#1A8A7D] hover:underline">
-          Read full description
-        </summary>
-        <p className="mt-2 text-xs text-[#1B3A5C]/80" title={option.fullDescription}>
-          {option.fullDescription}
-        </p>
-      </details>
     </label>
   );
 }

@@ -20,7 +20,7 @@ export const sectionCompetitiveConfig: AssessmentSectionConfig = {
     },
     {
       name: "Distributor Coverage Gaps",
-      context: "If competitors are on Pax8 and you're not, MSPs buy the competitor because it's easier.",
+      context: "If competitors are leveraging distributors and you're not, MSPs may buy the competitor because it's easier.",
       questionKey: "q2",
       options: [
         { score: 1, shortLabel: "Competitors locked up key distributors, no obvious openings", fullDescription: "Competitors locked up key distributors, no obvious openings. Hard to get listed." },
@@ -32,7 +32,7 @@ export const sectionCompetitiveConfig: AssessmentSectionConfig = {
     },
     {
       name: "MSP Platform Ecosystem Fit",
-      context: "ConnectWise, Kaseya/Datto, and N-able are the ecosystems MSPs live in. Products that complement them get adopted faster.",
+      context: "Does your product complement or enhance adjacent products or does your product have overlapping features that make it confusing?",
       questionKey: "q3",
       options: [
         { score: 1, shortLabel: "Directly competes with a module in a major MSP platform", fullDescription: "Directly competes with a module in a major MSP platform. Friction with platform vendors." },
@@ -63,7 +63,7 @@ export const sectionCompetitiveConfig: AssessmentSectionConfig = {
         { score: 2, shortLabel: "Minor market shifts, nothing creating urgency", fullDescription: "Minor market shifts, nothing creating urgency. Status quo." },
         { score: 3, shortLabel: "Some market movement (acquisition, new compliance requirements) creating moderate opportunity", fullDescription: "Some market movement (acquisition, new compliance requirements) creating moderate opportunity. Some movement." },
         { score: 4, shortLabel: "Clear timing window from competitor disruption or market shift creating partner movement", fullDescription: "Clear timing window from competitor disruption or market shift creating partner movement. Window open." },
-        { score: 5, shortLabel: "Urgent window (Broadcom/VMware-level disruption) forcing MSPs to reevaluate vendors now", fullDescription: "Urgent window (Broadcom/VMware-level disruption) forcing MSPs to reevaluate vendors now. Act now." },
+        { score: 5, shortLabel: "Urgent window forcing MSPs to reevaluate vendors now", fullDescription: "Urgent window forcing MSPs to reevaluate vendors now." },
       ],
     },
   ],

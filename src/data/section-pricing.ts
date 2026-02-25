@@ -4,7 +4,8 @@ export const sectionPricingConfig: AssessmentSectionConfig = {
   sectionKey: "section2",
   sectionNumber: 2,
   title: "Pricing & Partner Economics",
-  description: "If the math doesn't work for the MSP, they won't invest. Period.",
+  description:
+    "Pricing and packaging for MSPs is materially different than for direct sales. This often is a make or break for large scale success.",
   questions: [
     {
       name: "MSP-Friendly Pricing Structure",
@@ -21,7 +22,7 @@ export const sectionPricingConfig: AssessmentSectionConfig = {
     },
     {
       name: "Partner Margin Viability",
-      context: "MSPs need 20-40%+ margins to justify building a practice around your product. If the math doesn't leave room for profit after delivery costs, they'll pick a competitor.",
+      context: "MSPs don't always need to make a significant margin on your software, but they can't lose money.",
       questionKey: "q2",
       options: [
         { score: 1, shortLabel: "No partner margin structure, MSPs buy at or near retail", fullDescription: "No partner margin structure, MSPs buy at or near retail. No room for MSP profit." },
@@ -33,7 +34,7 @@ export const sectionPricingConfig: AssessmentSectionConfig = {
     },
     {
       name: "Billing & Invoicing Flexibility",
-      context: "An MSP managing 80 clients does not want 80 separate invoices. Aggregate billing, monthly true-up, and flexible payment terms are table stakes.",
+      context: "Aggregate billing, monthly true-up, and flexible payment terms are a necessity.",
       questionKey: "q3",
       options: [
         { score: 1, shortLabel: "Per-client billing only, no aggregate invoicing, manual adds/changes", fullDescription: "Per-client billing only, no aggregate invoicing, manual adds/changes. Operational nightmare for MSPs." },
@@ -57,7 +58,7 @@ export const sectionPricingConfig: AssessmentSectionConfig = {
     },
     {
       name: "MSP Cost to Deliver",
-      context: "Revenue minus the MSP's cost to sell, deploy, and support your product per client equals their real margin. If it takes 4 hours per client per month to manage, the economics collapse.",
+      context: "The easier it is to deliver your product, the easier it is to adopt by the MSP and the faster success you'll see.",
       questionKey: "q5",
       options: [
         { score: 1, shortLabel: "High labor per client, significant ongoing management and vendor-assisted support", fullDescription: "High labor per client, significant ongoing management and vendor-assisted support. Economics collapse at scale." },

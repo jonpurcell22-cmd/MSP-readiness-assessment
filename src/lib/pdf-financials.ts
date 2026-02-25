@@ -88,8 +88,7 @@ export function getCostOfDelay(inputs: FinancialInputs): {
   };
 }
 
+/** Format dollar amounts with comma separators (e.g. $125,000, $50,000,000). */
 export function formatCurrency(n: number): string {
-  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `$${(n / 1_000).toFixed(0)}K`;
-  return `$${Math.round(n).toLocaleString()}`;
+  return `$${Math.round(n).toLocaleString("en-US", { maximumFractionDigits: 0, minimumFractionDigits: 0 })}`;
 }

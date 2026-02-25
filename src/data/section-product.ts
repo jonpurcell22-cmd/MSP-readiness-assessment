@@ -5,12 +5,12 @@ export const sectionProductConfig: AssessmentSectionConfig = {
   sectionNumber: 1,
   title: "MSP-Ready Product Architecture",
   description:
-    "MSPs manage dozens or hundreds of clients. If your product can't handle that operational reality, nothing else matters.",
+    "MSPs manage dozens or hundreds of clients. Your product must be able to handle that operational reality.",
   questions: [
     {
       name: "Multi-Tenant Management",
       context:
-        "MSPs need to manage all their clients from one place. Logging into separate instances per client is a dealbreaker.",
+        "MSPs need to manage all their clients from one place. Logging into separate instances per client inhibits scale.",
       questionKey: "q1",
       options: [
         {
@@ -51,7 +51,7 @@ export const sectionProductConfig: AssessmentSectionConfig = {
     {
       name: "API & Integration Depth",
       context:
-        "MSPs run their business through PSA and RMM platforms. If your product doesn't connect to their operational backbone, it stays on the shelf.",
+        "Most MSPs operate their core service delivery and operations through PSA and RMM platforms. If your product doesn't connect to their operational backbone, it stays on the shelf.",
       questionKey: "q2",
       options: [
         {
@@ -62,7 +62,7 @@ export const sectionProductConfig: AssessmentSectionConfig = {
         },
         {
           score: 2,
-          shortLabel: "Basic API (read-only or limited), no PSA/RMM integrations",
+          shortLabel: "Basic API (limited), no PSA/RMM integrations",
           fullDescription:
             "Basic API (read-only or limited), no PSA/RMM integrations. Some programmability but not connected to MSP stack.",
         },
@@ -92,7 +92,7 @@ export const sectionProductConfig: AssessmentSectionConfig = {
     {
       name: "Automated Provisioning",
       context:
-        "When an MSP signs a new client on Monday, they need that client live on your platform by Tuesday. Not next week.",
+        "When an MSP signs a new client, they need to provision them on a reliable timeline.",
       questionKey: "q3",
       options: [
         {
@@ -133,7 +133,7 @@ export const sectionProductConfig: AssessmentSectionConfig = {
     {
       name: "White-Label / Co-Brand Capability",
       context:
-        "MSPs sell their brand, not yours. If every touchpoint carries your logo, the MSP is training their client to buy direct.",
+        "MSPs build and monetize their own brand. If every client touchpoint is dominated by your logo, you risk conditioning the customer to view you as the primary provider rather than the MSP.",
       questionKey: "q4",
       options: [
         {
@@ -174,7 +174,7 @@ export const sectionProductConfig: AssessmentSectionConfig = {
     {
       name: "Client Reporting & Value Demonstration",
       context:
-        "MSPs justify their monthly fee by showing clients the value delivered. If they can't pull a report that proves it, your product becomes hard to defend at renewal.",
+        "MSPs earn their recurring revenue by demonstrating measurable value. If they cannot easily produce reporting that proves outcomes, your solution becomes difficult to justify at renewal.",
       questionKey: "q5",
       options: [
         {

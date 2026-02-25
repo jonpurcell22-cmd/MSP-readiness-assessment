@@ -4,7 +4,7 @@ export const sectionEnablementConfig: AssessmentSectionConfig = {
   sectionKey: "section5",
   sectionNumber: 5,
   title: "Enablement & Partner Experience",
-  description: "MSPs decide in the first 90 days whether to invest in your product or shelve it. The partner experience makes or breaks that window.",
+  description: "MSPs need clear, consistent enablement with a predictable experience.",
   questions: [
     {
       name: "Partner Onboarding Experience",
@@ -32,7 +32,7 @@ export const sectionEnablementConfig: AssessmentSectionConfig = {
     },
     {
       name: "Technical Training & Certification",
-      context: "MSP technicians need to be self-sufficient. Training that covers how to click buttons isn't enough. They need to build a managed service practice.",
+      context: "MSP technicians need to be self-sufficient. They should become Super-Users of your product.",
       questionKey: "q3",
       options: [
         { score: 1, shortLabel: "No training program, MSPs learn by trial and error", fullDescription: "No training program, MSPs learn by trial and error. High support cost, slow adoption." },
@@ -44,7 +44,7 @@ export const sectionEnablementConfig: AssessmentSectionConfig = {
     },
     {
       name: "Partner Support Experience",
-      context: "When an MSP has a critical client issue at 2pm, getting in line behind end-user tickets is not acceptable.",
+      context: "Are you prepared to build a dedicated Partner support structure?",
       questionKey: "q4",
       options: [
         { score: 1, shortLabel: "Same support queue as end users, no differentiation", fullDescription: "Same support queue as end users, no differentiation. Partners treated like everyone else." },
@@ -56,7 +56,7 @@ export const sectionEnablementConfig: AssessmentSectionConfig = {
     },
     {
       name: "NFR & Demo Environment",
-      context: "MSPs need to eat their own cooking before selling. NFR licenses let them use it internally. A demo environment lets them show prospects. Without both, your sales cycle doubles.",
+      context: "NFR and demo environments are necessary tools for MSPs to learn and show how your product enhances customer outcomes.",
       questionKey: "q5",
       options: [
         { score: 1, shortLabel: "No NFR licenses or demo environment", fullDescription: "No NFR licenses or demo environment. MSPs sell blind." },
