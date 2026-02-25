@@ -11,7 +11,14 @@ import {
   TIER_SCORE_RANGES,
   MAX_SECTION_SCORE,
 } from "@/lib/scoring";
-import type { NarrativeOutput } from "@/lib/narrative";
+import type {
+  NarrativeOutput,
+  NarrativePart1,
+  NarrativePart2,
+  NarrativePart3,
+} from "@/lib/narrative";
+import type { CompetitiveLandscapeOutput } from "@/types/competitive";
+import { isCompetitiveLandscapeOutput } from "@/types/competitive";
 import { getThreeYearProjection, getCostOfDelay } from "@/lib/pdf-financials";
 
 /** Format dollar amount with commas and currency symbol. */
@@ -34,7 +41,10 @@ const SECTION_LABELS: Record<number, string> = {
   7: "Channel Health",
 };
 
-const BOOKING_URL = process.env.NEXT_PUBLIC_BOOKING_URL || "https://calendly.com/jon-untappedchannelstrategy";
+const CALENDLY_USER = "jon-untappedchannelstrategy";
+const BOOKING_URL =
+  process.env.NEXT_PUBLIC_BOOKING_URL ||
+  `https://calendly.com/${CALENDLY_USER}`;
 
 type SubmitStatus = "idle" | "loading" | "success" | "error";
 
@@ -55,8 +65,16 @@ export function ResultsTeaser() {
   const [submitStatus, setSubmitStatus] = useState<SubmitStatus>("idle");
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [narrative, setNarrative] = useState<NarrativeOutput | null>(null);
+  const [narrativePart1, setNarrativePart1] = useState<NarrativePart1 | null>(null);
+  const [narrativePart2, setNarrativePart2] = useState<NarrativePart2 | null>(null);
+  const [narrativePart3, setNarrativePart3] = useState<NarrativePart3 | null>(null);
+  const [assessmentId, setAssessmentId] = useState<string | null>(null);
+  const [competitiveLandscape, setCompetitiveLandscape] = useState<CompetitiveLandscapeOutput | null>(null);
+  const [competitiveFailed, setCompetitiveFailed] = useState<boolean>(false);
   const [emailSent, setEmailSent] = useState<boolean>(true);
   const submitAttempted = useRef(false);
+  const narrativeFetchStarted = useRef(false);
+  const finalizeSent = useRef(false);
 
   // Ensure we have computed results (e.g. user landed here via direct URL)
   useEffect(() => {
@@ -99,8 +117,12 @@ export function ResultsTeaser() {
         if (!res.ok) return Promise.reject(new Error(data?.error ?? res.statusText));
         setSubmitError(null);
         setSubmitStatus("success");
-        if (data.narrative?.executive_summary) setNarrative(data.narrative);
-        setEmailSent(data.emailSent !== false);
+        if (data.narrative?.executive_summary) {
+          setNarrative(data.narrative);
+          setEmailSent(data.emailSent !== false);
+        } else if (data.id) {
+          setAssessmentId(data.id);
+        }
       })
       .catch((err) => {
         console.error("Submit failed:", err);
@@ -121,6 +143,145 @@ export function ResultsTeaser() {
     section7,
     section7Skipped,
     submitStatus,
+  ]);
+
+  // When we have assessmentId and no full narrative yet, fire 3 parallel narrative-part requests
+  useEffect(() => {
+    if (
+      !assessmentId ||
+      narrative ||
+      narrativeFetchStarted.current ||
+      submitStatus !== "success"
+    ) {
+      return;
+    }
+    narrativeFetchStarted.current = true;
+    const payload = {
+      contact,
+      financials,
+      section1,
+      section2,
+      section3,
+      section4,
+      section5,
+      section6,
+      section7,
+      section7Skipped: section7Skipped === true,
+      computed,
+    };
+    const opts = {
+      method: "POST" as const,
+      headers: { "Content-Type": "application/json" },
+    };
+    const req1 = fetch("/api/generate-narrative", {
+      ...opts,
+      body: JSON.stringify({ ...payload, part: 1 }),
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.executive_summary) setNarrativePart1(data);
+        return data;
+      })
+      .catch((err) => {
+        console.error("Narrative part 1 failed:", err);
+        return null;
+      });
+    const req2 = fetch("/api/generate-narrative", {
+      ...opts,
+      body: JSON.stringify({ ...payload, part: 2 }),
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.section_interpretations) setNarrativePart2(data);
+        return data;
+      })
+      .catch((err) => {
+        console.error("Narrative part 2 failed:", err);
+        return null;
+      });
+    const req3 = fetch("/api/generate-narrative", {
+      ...opts,
+      body: JSON.stringify({ ...payload, part: 3 }),
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.financial_commentary != null) setNarrativePart3(data);
+        return data;
+      })
+      .catch((err) => {
+        console.error("Narrative part 3 failed:", err);
+        return null;
+      });
+
+    const section6Total = computed?.sectionTotals?.section6 ?? 0;
+    const competitiveReq = fetch("/api/generate-competitive", {
+      ...opts,
+      body: JSON.stringify({
+        companyName: contact.companyName,
+        companyWebsite: contact.companyWebsite || undefined,
+        productCategory: contact.productCategory || "",
+        section6Total,
+        section6Scores: section6
+          ? { q1: section6.q1, q2: section6.q2, q3: section6.q3, q4: section6.q4, q5: section6.q5 }
+          : undefined,
+      }),
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        if (isCompetitiveLandscapeOutput(data)) {
+          setCompetitiveLandscape(data);
+          return data;
+        }
+        setCompetitiveFailed(true);
+        return null;
+      })
+      .catch((err) => {
+        console.error("Competitive landscape failed:", err);
+        setCompetitiveFailed(true);
+        return null;
+      });
+
+    Promise.all([req1, req2, req3, competitiveReq]).then(([p1, p2, p3, competitive]) => {
+      if (p1?.executive_summary && p2?.section_interpretations && p3?.financial_commentary) {
+        const merged: NarrativeOutput = {
+          executive_summary: p1.executive_summary,
+          section_interpretations: p2.section_interpretations,
+          financial_commentary: p3.financial_commentary,
+          cost_of_delay_narrative: p3.cost_of_delay_narrative,
+          roadmap_narrative: p3.roadmap_narrative,
+        };
+        setNarrative(merged);
+        if (!finalizeSent.current && assessmentId) {
+          finalizeSent.current = true;
+          fetch(`/api/assessments/${assessmentId}/finalize`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              narrative: merged,
+              competitiveLandscape: isCompetitiveLandscapeOutput(competitive) ? competitive : undefined,
+            }),
+          })
+            .then((r) => r.json())
+            .then((data) => setEmailSent(data.emailSent !== false))
+            .catch(() => setEmailSent(false));
+        }
+      }
+    });
+  }, [
+    assessmentId,
+    narrative,
+    submitStatus,
+    contact,
+    financials,
+    section1,
+    section2,
+    section3,
+    section4,
+    section5,
+    section6,
+    section7,
+    section7Skipped,
+    computed,
   ]);
 
   // Count-up animation for score
@@ -229,14 +390,229 @@ export function ResultsTeaser() {
           </p>
         </div>
 
-        {/* AI summary or tier interpretation */}
-        <p className="mb-8 text-center text-lg text-[#1B3A5C]/90">
-          {narrative?.executive_summary ?? (
-            submitStatus === "loading" || submitStatus === "idle"
-              ? "Generating your personalized summary..."
-              : TIER_INTERPRETATIONS[readinessTier]
-          )}
-        </p>
+        {/* Part 1: Executive summary + top 3 gaps + top 2 strengths */}
+        <section className="mb-8">
+          {(() => {
+            const part1 = narrativePart1 ?? (narrative ? { executive_summary: narrative.executive_summary, top_3_critical_gaps: [] as string[], top_2_strengths: [] as string[] } : null);
+            const part1Loading = !part1 && (submitStatus === "loading" || (submitStatus === "success" && assessmentId));
+            if (part1Loading) {
+              return (
+                <div className="animate-pulse space-y-3 rounded-xl border border-[#1B3A5C]/10 bg-[#1B3A5C]/5 px-5 py-4">
+                  <div className="h-4 w-full rounded bg-[#1B3A5C]/20" />
+                  <div className="h-4 w-3/4 rounded bg-[#1B3A5C]/20" />
+                  <div className="h-4 w-2/3 rounded bg-[#1B3A5C]/20" />
+                  <p className="pt-2 text-center text-sm text-[#1B3A5C]/70">Generating your personalized analysis...</p>
+                </div>
+              );
+            }
+            if (part1) {
+              return (
+                <div className="rounded-xl border border-[#1B3A5C]/10 bg-white/80 px-5 py-4 transition-opacity duration-300">
+                  <p className="text-center text-lg text-[#1B3A5C]/90">{part1.executive_summary}</p>
+                  {(part1.top_3_critical_gaps?.length > 0 || part1.top_2_strengths?.length > 0) && (
+                    <div className="mt-5 space-y-4">
+                      {part1.top_3_critical_gaps?.length > 0 && (
+                        <div>
+                          <h3 className="mb-2 text-sm font-semibold text-[#1B3A5C]">Top critical gaps</h3>
+                          <ul className="list-inside list-disc space-y-1 text-sm text-[#1B3A5C]/90">
+                            {part1.top_3_critical_gaps.map((gap, i) => (
+                              <li key={i}>{gap}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      {part1.top_2_strengths?.length > 0 && (
+                        <div>
+                          <h3 className="mb-2 text-sm font-semibold text-[#1B3A5C]">Top strengths to leverage</h3>
+                          <ul className="list-inside list-disc space-y-1 text-sm text-[#1B3A5C]/90">
+                            {part1.top_2_strengths.map((s, i) => (
+                              <li key={i}>{s}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            }
+            return (
+              <p className="text-center text-lg text-[#1B3A5C]/90">{TIER_INTERPRETATIONS[readinessTier]}</p>
+            );
+          })()}
+        </section>
+
+        {/* Part 2: Section interpretations */}
+        <section className="mb-8">
+          {(() => {
+            const part2 = narrativePart2 ?? (narrative ? { section_interpretations: narrative.section_interpretations } : null);
+            const part2Loading = !part2 && (submitStatus === "loading" || (submitStatus === "success" && assessmentId));
+            if (part2Loading) {
+              return (
+                <div className="animate-pulse space-y-3 rounded-xl border border-[#1B3A5C]/10 bg-[#1B3A5C]/5 px-5 py-4">
+                  <div className="h-4 w-1/4 rounded bg-[#1B3A5C]/20" />
+                  <div className="space-y-2">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="h-12 rounded bg-[#1B3A5C]/20" />
+                    ))}
+                  </div>
+                  <p className="pt-2 text-center text-sm text-[#1B3A5C]/70">Analyzing each section...</p>
+                </div>
+              );
+            }
+            if (part2?.section_interpretations?.length) {
+              return (
+                <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition-opacity duration-300">
+                  <h2 className="mb-4 text-lg font-semibold text-[#1B3A5C]">Section-by-section analysis</h2>
+                  <div className="space-y-5">
+                    {part2.section_interpretations.map((s) => (
+                      <div key={s.section_number}>
+                        <h3 className="text-sm font-semibold text-[#1B3A5C]">{s.section_name}</h3>
+                        <p className="mt-1 text-sm text-[#1B3A5C]/90">{s.interpretation}</p>
+                        {s.recommendation && (
+                          <p className="mt-2 text-sm font-medium text-[#1A8A7D]">{s.recommendation}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            }
+            return null;
+          })()}
+        </section>
+
+        {/* Part 3: Financial commentary, cost of delay, roadmap */}
+        <section className="mb-8">
+          {(() => {
+            const part3 = narrativePart3 ?? (narrative ? { financial_commentary: narrative.financial_commentary, cost_of_delay_narrative: narrative.cost_of_delay_narrative, roadmap_narrative: narrative.roadmap_narrative } : null);
+            const part3Loading = !part3 && (submitStatus === "loading" || (submitStatus === "success" && assessmentId));
+            if (part3Loading) {
+              return (
+                <div className="animate-pulse space-y-3 rounded-xl border border-[#1B3A5C]/10 bg-[#1B3A5C]/5 px-5 py-4">
+                  <div className="h-4 w-full rounded bg-[#1B3A5C]/20" />
+                  <div className="h-4 w-3/4 rounded bg-[#1B3A5C]/20" />
+                  <p className="pt-2 text-center text-sm text-[#1B3A5C]/70">Preparing financial and roadmap insights...</p>
+                </div>
+              );
+            }
+            if (part3) {
+              return (
+                <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition-opacity duration-300">
+                  <h2 className="mb-4 text-lg font-semibold text-[#1B3A5C]">Financial context & next steps</h2>
+                  <div className="space-y-4 text-sm text-[#1B3A5C]/90">
+                    <p>{part3.financial_commentary}</p>
+                    <p>{part3.cost_of_delay_narrative}</p>
+                    <p>{part3.roadmap_narrative}</p>
+                  </div>
+                </div>
+              );
+            }
+            return null;
+          })()}
+        </section>
+
+        {/* Competitive MSP Landscape */}
+        <section className="mb-8">
+          {(() => {
+            const competitiveLoading =
+              !competitiveLandscape &&
+              !competitiveFailed &&
+              (submitStatus === "loading" || (submitStatus === "success" && assessmentId));
+            if (competitiveLoading) {
+              return (
+                <div className="animate-pulse space-y-3 rounded-xl border border-[#1B3A5C]/10 bg-[#1B3A5C]/5 px-5 py-6">
+                  <div className="h-5 w-1/3 rounded bg-[#1B3A5C]/20" />
+                  <div className="space-y-2">
+                    {[1, 2, 3, 4, 5].map((i) => (
+                      <div key={i} className="h-10 rounded bg-[#1B3A5C]/20" />
+                    ))}
+                  </div>
+                  <p className="pt-2 text-center text-sm text-[#1B3A5C]/70">
+                    Researching your competitive landscape...
+                  </p>
+                </div>
+              );
+            }
+            if (competitiveFailed && !competitiveLandscape) {
+              return (
+                <div className="rounded-xl border border-[#1B3A5C]/20 bg-[#F4F7FA] px-5 py-4">
+                  <h2 className="mb-2 text-lg font-semibold text-[#1B3A5C]">Competitive MSP Landscape</h2>
+                  <p className="text-sm text-[#1B3A5C]/90">
+                    Competitive landscape research could not be completed. Your consultant can provide this analysis during your deep-dive session.
+                  </p>
+                </div>
+              );
+            }
+            if (competitiveLandscape) {
+              const oppStatus = "No Public MSP Program Found";
+              return (
+                <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition-opacity duration-300">
+                  <h2 className="mb-4 text-lg font-semibold text-[#1B3A5C]">Competitive MSP Landscape</h2>
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[640px] text-sm">
+                      <thead>
+                        <tr className="border-b border-gray-200 text-left text-[#1B3A5C]/80">
+                          <th className="pb-2 pr-3 font-medium">Competitor</th>
+                          <th className="pb-2 pr-3 font-medium">MSP Program Status</th>
+                          <th className="pb-2 pr-3 font-medium">MSP Distributors</th>
+                          <th className="pb-2 font-medium">Key Finding</th>
+                        </tr>
+                      </thead>
+                      <tbody className="text-[#1B3A5C]">
+                        {competitiveLandscape.competitors.map((c, i) => (
+                          <tr
+                            key={i}
+                            className={
+                              c.mspProgramStatus === oppStatus
+                                ? "border-b border-gray-100 bg-emerald-50/60"
+                                : "border-b border-gray-100 bg-gray-50/50"
+                            }
+                          >
+                            <td className="py-2.5 pr-3 font-medium">
+                              {c.website ? (
+                                <a
+                                  href={c.website}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-[#1A8A7D] hover:underline"
+                                >
+                                  {c.name}
+                                </a>
+                              ) : (
+                                c.name
+                              )}
+                            </td>
+                            <td className="py-2.5 pr-3">{c.mspProgramStatus}</td>
+                            <td className="py-2.5 pr-3">
+                              {c.distributorPresence?.length ? c.distributorPresence.join(", ") : "—"}
+                            </td>
+                            <td className="py-2.5 text-[#1B3A5C]/90">{c.programEvidence}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="mt-5 space-y-4 border-t border-gray-200 pt-5">
+                    <div>
+                      <h3 className="mb-1 text-sm font-semibold text-[#1B3A5C]">Landscape summary</h3>
+                      <p className="text-sm text-[#1B3A5C]/90">{competitiveLandscape.landscapeSummary}</p>
+                    </div>
+                    <div>
+                      <h3 className="mb-1 text-sm font-semibold text-[#1B3A5C]">Distributor opportunity</h3>
+                      <p className="text-sm text-[#1B3A5C]/90">{competitiveLandscape.distributorOpportunity}</p>
+                    </div>
+                    <div>
+                      <h3 className="mb-1 text-sm font-semibold text-[#1B3A5C]">Strategic implication</h3>
+                      <p className="text-sm text-[#1B3A5C]/90">{competitiveLandscape.strategicImplication}</p>
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+            return null;
+          })()}
+        </section>
 
         {/* Section bar chart */}
         <section className="mb-10 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
@@ -375,9 +751,14 @@ export function ResultsTeaser() {
 
         {/* CTAs */}
         <div className="space-y-6 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-          {(submitStatus === "idle" || submitStatus === "loading") && (
+          {submitStatus === "loading" && (
             <p className="text-center text-[#1B3A5C]">
-              Generating your report...
+              Saving your assessment...
+            </p>
+          )}
+          {submitStatus === "success" && !narrative && assessmentId && (
+            <p className="text-center text-[#1B3A5C]">
+              Your report will be sent to <strong>{contact.email}</strong> once your personalized analysis is ready.
             </p>
           )}
           {submitStatus === "error" && (
@@ -419,17 +800,17 @@ export function ResultsTeaser() {
           )}
           {(submitStatus === "success" || submitStatus === "loading") && (
             <>
-              <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
+              <div className="flex flex-col items-center gap-4 pt-2">
                 <a
                   href={BOOKING_URL}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center rounded-lg bg-[#1A8A7D] px-6 py-3 font-semibold text-white hover:bg-[#157a6e] focus:outline-none focus:ring-2 focus:ring-[#1A8A7D] focus:ring-offset-2"
+                  className="w-full max-w-sm shrink-0 rounded-lg bg-[#1A8A7D] px-6 py-3.5 text-center font-semibold text-white no-underline shadow-sm transition-colors hover:bg-[#157a6e] focus:outline-none focus:ring-2 focus:ring-[#1A8A7D] focus:ring-offset-2 sm:w-auto"
                 >
                   Book a Complimentary Deep-Dive Assessment
                 </a>
               </div>
-              <p className="text-center text-sm text-[#1B3A5C]/70">
+              <p className="mt-4 text-center text-sm text-[#1B3A5C]/70">
                 Didn&apos;t receive it? Check spam or contact{" "}
                 <a
                   href="mailto:jon@untappedchannelstrategy.com"

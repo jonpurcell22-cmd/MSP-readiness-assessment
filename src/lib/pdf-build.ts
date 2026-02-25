@@ -10,6 +10,7 @@ import { AssessmentPDFDocument } from "@/lib/pdf-document";
 import type { PDFData } from "@/lib/pdf-document";
 import { getThreeYearProjection, getCostOfDelay } from "@/lib/pdf-financials";
 import type { NarrativeOutput } from "@/lib/narrative";
+import type { CompetitiveLandscapeOutput } from "@/types/competitive";
 import type { SectionTotals, ReadinessTier, SectionScores } from "@/types/assessment";
 import { sectionProductConfig } from "@/data/section-product";
 import { sectionPricingConfig } from "@/data/section-pricing";
@@ -87,9 +88,14 @@ export interface BuildPDFPayload {
   section5: SectionScores | null;
   section6: SectionScores | null;
   section7: SectionScores | null;
-  /** Optional; overrides env. If not provided, uses BOOKING_URL or NEXT_PUBLIC_BOOKING_URL. */
+  /** Optional; overrides env. If not provided, uses BOOKING_URL or NEXT_PUBLIC_BOOKING_URL, then default. */
   bookingUrl?: string;
+  /** Optional competitive MSP landscape (from generate-competitive API). */
+  competitiveLandscape?: CompetitiveLandscapeOutput;
 }
+
+/** Calendly booking URL used in the PDF when no override or env is set. */
+const PDF_CALENDLY_URL = "https://calendly.com/jon-untappedchannelstrategy";
 
 export function buildPDFData(payload: BuildPDFPayload): PDFData {
   const { contact, financials, computed, narrative, section1, section2, section3, section4, section5, section6, section7 } = payload;
@@ -104,12 +110,14 @@ export function buildPDFData(payload: BuildPDFPayload): PDFData {
   const costOfDelay = getCostOfDelay(inputs);
   const arr = financials.arr ?? 0;
   const acv = financials.acv ?? 0;
-  const defaultCalendlyUrl = "https://calendly.com/jon-untappedchannelstrategy";
-  const bookingUrl =
+  const rawBookingUrl =
     payload.bookingUrl ??
     process.env.BOOKING_URL ??
-    process.env.NEXT_PUBLIC_BOOKING_URL ??
-    defaultCalendlyUrl;
+    process.env.NEXT_PUBLIC_BOOKING_URL;
+  const bookingUrl =
+    typeof rawBookingUrl === "string" && rawBookingUrl.trim()
+      ? rawBookingUrl.trim()
+      : PDF_CALENDLY_URL;
   const assetsBasePath = path.join(process.cwd(), "public");
 
   const sectionScoresList = [section1, section2, section3, section4, section5, section6, section7];
@@ -137,6 +145,7 @@ export function buildPDFData(payload: BuildPDFPayload): PDFData {
     arr,
     acv,
     bookingUrl,
+    competitiveLandscape: payload.competitiveLandscape,
   };
 }
 

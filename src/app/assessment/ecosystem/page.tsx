@@ -1,4 +1,4 @@
-import { AssessmentSection } from "@/components/AssessmentSection";
+import { AssessmentSection } from "@/components/AssessmentSectionPage";
 import { sectionEcosystemConfig } from "@/data/section-ecosystem";
 
 export default function AssessmentEcosystemPage() {

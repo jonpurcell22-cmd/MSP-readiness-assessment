@@ -20,6 +20,25 @@ export interface NarrativeOutput {
   roadmap_narrative: string;
 }
 
+/** Part 1: Executive summary + top gaps/strengths (show first on results page). */
+export interface NarrativePart1 {
+  executive_summary: string;
+  top_3_critical_gaps: string[];
+  top_2_strengths: string[];
+}
+
+/** Part 2: Section-by-section interpretations. */
+export interface NarrativePart2 {
+  section_interpretations: SectionInterpretation[];
+}
+
+/** Part 3: Financial, cost of delay, roadmap. */
+export interface NarrativePart3 {
+  financial_commentary: string;
+  cost_of_delay_narrative: string;
+  roadmap_narrative: string;
+}
+
 /** Type guard for DB/stored JSON that may be NarrativeOutput. */
 export function isNarrativeOutput(value: unknown): value is NarrativeOutput {
   if (!value || typeof value !== "object") return false;
@@ -239,6 +258,88 @@ Return ONLY valid JSON (no markdown, no backticks, no preamble). Every string mu
 }
 
 Include one object in section_interpretations for each of sections 1 through 6, and section 7 only if Section 7 Skipped is false. Use exact section_name values: "MSP-Ready Product Architecture", "Pricing & Partner Economics", "Organizational & GTM Readiness", "Partner Ecosystem & Recruitment", "Enablement & Partner Experience", "Competitive & Distribution Landscape", "Existing MSP Channel Health". Every interpretation must name at least one question and score; every recommendation must be concrete and tied to their data. Do not repeat the same point across sections.`;
+
+/** Shared context block for part-specific prompts. */
+function narrativeContextBlock(data: NarrativeInput): string {
+  const lines: string[] = [
+    formatSectionScores(1, "MSP-Ready Product Architecture", data.s1, data.section1Total),
+    formatSectionScores(2, "Pricing & Partner Economics", data.s2, data.section2Total),
+    formatSectionScores(3, "Organizational & GTM Readiness", data.s3, data.section3Total),
+    formatSectionScores(4, "Partner Ecosystem & Recruitment", data.s4, data.section4Total),
+    formatSectionScores(5, "Enablement & Partner Experience", data.s5, data.section5Total),
+    formatSectionScores(6, "Competitive & Distribution Landscape", data.s6, data.section6Total),
+  ];
+  if (!data.section7Skipped && data.s7) {
+    lines.push(
+      formatSectionScores(7, "Existing MSP Channel Health", data.s7, data.section7Total ?? 0)
+    );
+  }
+  return `ASSESSMENT DATA:
+- Company: ${data.companyName}
+- Product Category: ${data.productCategory}
+- Title: ${data.title}
+- Overall Score: ${data.overallScore}/100
+- Readiness Tier: ${data.readinessTier}
+- Section 7 Skipped: ${data.section7Skipped}
+
+QUESTION SCORES:
+${lines.map((line) => `- ${line}`).join("\n")}
+
+RED FLAGS: ${data.redFlags.length > 0 ? data.redFlags.join("; ") : "None"}
+
+FINANCIAL: ARR $${data.arr ?? "N/A"}, ACV $${data.acv ?? "N/A"}, Customers ${data.customerCount ?? "N/A"}, Direct % ${data.directRevenuePct}, Sales Cycle ${data.salesCycleDays ?? "N/A"} days, CAC $${data.cac ?? "N/A"}, Existing MSP: ${data.existingMspRelationships ?? "N/A"}`;
+}
+
+/** Part 1 prompt: executive summary + top 3 gaps + top 2 strengths. */
+export function buildNarrativePromptPart1(data: NarrativeInput): string {
+  const context = narrativeContextBlock(data);
+  return `${context}
+
+Return ONLY valid JSON (no markdown, no backticks, no preamble):
+{
+  "executive_summary": "4+ sentences. What their score/tier means. Name single biggest blocker (question + score) and single biggest opportunity (question + score). One clear recommendation. End with exactly: Regardless of where you landed, the logical next step is a complimentary 90-minute deep-dive assessment with an expert who can uncover the nuances a self-assessment cannot. No cost, no obligation.",
+  "top_3_critical_gaps": ["First gap: question name and score, why it blocks MSP success.", "Second gap.", "Third gap."],
+  "top_2_strengths": ["First strength: question/section and score, how to leverage.", "Second strength."]
+}
+
+Every item must cite specific questions and scores. No generic phrases.`;
+}
+
+/** Part 2 prompt: section interpretations for all sections. */
+export function buildNarrativePromptPart2(data: NarrativeInput): string {
+  const context = narrativeContextBlock(data);
+  const sectionList = data.section7Skipped
+    ? "1 through 6"
+    : "1 through 7";
+  return `${context}
+
+Return ONLY valid JSON (no markdown, no backticks, no preamble). Include one object in section_interpretations for sections ${sectionList}. Use exact section_name: "MSP-Ready Product Architecture", "Pricing & Partner Economics", "Organizational & GTM Readiness", "Partner Ecosystem & Recruitment", "Enablement & Partner Experience", "Competitive & Distribution Landscape", "Existing MSP Channel Health" (only include section 7 if Section 7 Skipped is false).
+
+{
+  "section_interpretations": [
+    {
+      "section_number": 1,
+      "section_name": "MSP-Ready Product Architecture",
+      "interpretation": "2-4 sentences. Name at least one question and its score. What it means for MSPs operationally.",
+      "recommendation": "One concrete action tied to their scores in this section."
+    }
+  ]
+}
+
+Every interpretation must name at least one question and score; every recommendation must be concrete.`;
+}
+
+/** Part 3 prompt: financial commentary, cost of delay, roadmap. */
+export function buildNarrativePromptPart3(data: NarrativeInput): string {
+  const context = narrativeContextBlock(data);
+  return `${context}
+
+Return ONLY valid JSON (no markdown, no backticks, no preamble):
+{
+  "financial_commentary": "2-3 sentences. Mention their ARR and ACV. Ground projections in their scale and category. Conservative; note assumptions.",
+  "cost_of_delay_narrative": "2-3 sentences. Tie to their product category and competitive/distribution scores. Why waiting costs them specifically.",
+  "roadmap_narrative": "3-4 sentences. Which gaps or dimensions to address first and in what order. Recommend the 90-minute deep-dive as first step (no cost, no obligation)."
+}`;
 }
 
 function sectionTier(total: number): "high" | "mid" | "low" {
@@ -363,41 +464,125 @@ export function generateFallbackNarrative(payload: {
 
 const NARRATIVE_TIMEOUT_MS = 15_000;
 
+type PayloadForNarrative = Parameters<typeof payloadToNarrativeInput>[0];
+
+/** Call Claude with prompt; throws on failure. */
+async function callClaudeForNarrative(
+  prompt: string,
+  maxTokens: number
+): Promise<string> {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) throw new Error("ANTHROPIC_API_KEY not set");
+  const { default: Anthropic } = await import("@anthropic-ai/sdk");
+  const anthropic = new Anthropic({ apiKey });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), NARRATIVE_TIMEOUT_MS);
+  const response = await Promise.race([
+    anthropic.messages.create(
+      {
+        model: "claude-sonnet-4-20250514",
+        max_tokens: maxTokens,
+        system: SYSTEM_PROMPT,
+        messages: [{ role: "user", content: prompt }],
+      },
+      { signal: controller.signal, timeout: NARRATIVE_TIMEOUT_MS }
+    ),
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("Narrative generation timed out")), NARRATIVE_TIMEOUT_MS)
+    ),
+  ]);
+  clearTimeout(timeoutId);
+  const block = response.content[0];
+  const text = block?.type === "text" ? block.text : "";
+  if (!text.trim()) throw new Error("Empty Claude response");
+  return text;
+}
+
+/** Part 1: Executive summary + top 3 critical gaps + top 2 strengths. */
+export async function getNarrativePart1(payload: PayloadForNarrative): Promise<NarrativePart1> {
+  const data = payloadToNarrativeInput(payload);
+  try {
+    const text = await callClaudeForNarrative(buildNarrativePromptPart1(data), 1200);
+    const parsed = JSON.parse(text) as NarrativePart1;
+    if (
+      typeof parsed.executive_summary !== "string" ||
+      !Array.isArray(parsed.top_3_critical_gaps) ||
+      !Array.isArray(parsed.top_2_strengths)
+    ) {
+      throw new Error("Invalid part 1 structure");
+    }
+    return parsed;
+  } catch (err) {
+    console.error("AI narrative part 1 failed, using fallback:", err);
+    const full = generateFallbackNarrative(payload);
+    const pairs = getSectionNumsWithTotals(
+      payload.computed.sectionTotals,
+      payload.computed.section7Skipped
+    );
+    const byTotalAsc = [...pairs].sort((a, b) => a.total - b.total);
+    const weakest = byTotalAsc.slice(0, 3).map((p) => `${SECTION_NAMES[p.num]} (${p.total}/25): address before scaling.`);
+    const strongest = byTotalAsc.slice(-2).reverse().map((p) => `${SECTION_NAMES[p.num]} (${p.total}/25): leverage in recruitment.`);
+    return {
+      executive_summary: full.executive_summary,
+      top_3_critical_gaps: weakest,
+      top_2_strengths: strongest,
+    };
+  }
+}
+
+/** Part 2: Section interpretations for all sections. */
+export async function getNarrativePart2(payload: PayloadForNarrative): Promise<NarrativePart2> {
+  const data = payloadToNarrativeInput(payload);
+  try {
+    const text = await callClaudeForNarrative(buildNarrativePromptPart2(data), 2800);
+    const parsed = JSON.parse(text) as NarrativePart2;
+    if (!Array.isArray(parsed.section_interpretations)) throw new Error("Invalid part 2 structure");
+    return parsed;
+  } catch (err) {
+    console.error("AI narrative part 2 failed, using fallback:", err);
+    const full = generateFallbackNarrative(payload);
+    return { section_interpretations: full.section_interpretations };
+  }
+}
+
+/** Part 3: Financial commentary, cost of delay, roadmap. */
+export async function getNarrativePart3(payload: PayloadForNarrative): Promise<NarrativePart3> {
+  const data = payloadToNarrativeInput(payload);
+  try {
+    const text = await callClaudeForNarrative(buildNarrativePromptPart3(data), 800);
+    const parsed = JSON.parse(text) as NarrativePart3;
+    if (
+      typeof parsed.financial_commentary !== "string" ||
+      typeof parsed.cost_of_delay_narrative !== "string" ||
+      typeof parsed.roadmap_narrative !== "string"
+    ) {
+      throw new Error("Invalid part 3 structure");
+    }
+    return parsed;
+  } catch (err) {
+    console.error("AI narrative part 3 failed, using fallback:", err);
+    const full = generateFallbackNarrative(payload);
+    return {
+      financial_commentary: full.financial_commentary,
+      cost_of_delay_narrative: full.cost_of_delay_narrative,
+      roadmap_narrative: full.roadmap_narrative,
+    };
+  }
+}
+
 /**
  * Generate narrative via Claude API with 15s timeout; on failure returns fallback.
- * Used by /api/generate-narrative and by submit flow.
+ * Used by /api/generate-narrative (full) and submit flow.
  */
-export async function getNarrative(payload: Parameters<typeof payloadToNarrativeInput>[0]): Promise<NarrativeOutput> {
+export async function getNarrative(payload: PayloadForNarrative): Promise<NarrativeOutput> {
   const data = payloadToNarrativeInput(payload);
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
+  if (!process.env.ANTHROPIC_API_KEY) {
     console.warn("ANTHROPIC_API_KEY not set, using fallback narrative");
     return generateFallbackNarrative(payload);
   }
   try {
-    const { default: Anthropic } = await import("@anthropic-ai/sdk");
-    const anthropic = new Anthropic({ apiKey });
     const prompt = buildNarrativePrompt(data);
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), NARRATIVE_TIMEOUT_MS);
-    const response = await Promise.race([
-      anthropic.messages.create(
-        {
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 4500,
-          system: SYSTEM_PROMPT,
-          messages: [{ role: "user", content: prompt }],
-        },
-        { signal: controller.signal, timeout: NARRATIVE_TIMEOUT_MS }
-      ),
-      new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("Narrative generation timed out")), NARRATIVE_TIMEOUT_MS)
-      ),
-    ]);
-    clearTimeout(timeoutId);
-    const block = response.content[0];
-    const text = block?.type === "text" ? block.text : "";
-    if (!text.trim()) throw new Error("Empty Claude response");
+    const text = await callClaudeForNarrative(prompt, 4500);
     const parsed = JSON.parse(text) as NarrativeOutput;
     if (!parsed.executive_summary || !Array.isArray(parsed.section_interpretations)) {
       throw new Error("Invalid narrative structure");

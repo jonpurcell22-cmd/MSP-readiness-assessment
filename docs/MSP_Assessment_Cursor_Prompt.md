@@ -163,7 +163,7 @@ Context: "MSPs justify their monthly fee by showing clients the value delivered.
 - 1 = No client-facing reporting, MSPs build reports manually
 - 2 = Basic reporting exists but not MSP-designed, no per-client breakdown
 - 3 = Per-client reports with relevant metrics, limited customization, no scheduled delivery
-- 4 = Good reporting with per-client breakdowns, multiple formats, some branding, scheduled delivery
+- 4 = Reporting meets basic MSP needs with per-client breakdowns, multiple formats, some branding, scheduled delivery
 - 5 = MSP-optimized: full customization, white-label, scheduled delivery, executive summaries, trend analysis for upselling
 
 ---

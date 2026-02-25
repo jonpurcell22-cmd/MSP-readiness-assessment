@@ -150,7 +150,7 @@ Use this document to fine-tune all user-facing text. Each section notes where th
 | 1 | No client-facing reporting, MSPs build reports manually | No client-facing reporting, MSPs build reports manually. Huge effort to prove value. |
 | 2 | Basic reporting exists but not MSP-designed, no per-client breakdown | Basic reporting exists but not MSP-designed, no per-client breakdown. MSPs adapt what's there. |
 | 3 | Per-client reports with relevant metrics, limited customization, no scheduled delivery | Per-client reports with relevant metrics, limited customization, no scheduled delivery. Useful but manual. |
-| 4 | Good reporting with per-client breakdowns, multiple formats, some branding, scheduled delivery | Good reporting with per-client breakdowns, multiple formats, some branding, scheduled delivery. MSPs can run renewals with confidence. |
+| 4 | Reporting meets basic MSP needs with per-client breakdowns, multiple formats, some branding, scheduled delivery | Reporting meets basic MSP needs with per-client breakdowns, multiple formats, some branding, scheduled delivery. MSPs can run renewals with confidence. |
 | 5 | MSP-optimized: full customization, white-label, scheduled delivery, executive summaries, trend analysis for upselling | MSP-optimized: full customization, white-label, scheduled delivery, executive summaries, trend analysis for upselling. Reporting becomes a revenue driver. |
 
 

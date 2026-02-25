@@ -9,6 +9,7 @@ import {
   StyleSheet,
 } from "@react-pdf/renderer";
 import type { NarrativeOutput } from "@/lib/narrative";
+import type { CompetitiveLandscapeOutput } from "@/types/competitive";
 import type { SectionTotals, ReadinessTier } from "@/types/assessment";
 import type { ThreeYearProjection } from "@/lib/pdf-financials";
 import { SECTION_PDF_LABELS, getStrengthsAndGaps } from "@/lib/pdf-questions";
@@ -324,6 +325,8 @@ export interface PDFData {
   /** Symbol icon for top-right on every page. */
   logoSymbolPath?: string;
   sectionQuestionDetails: { sectionNum: number; questions: { questionName: string; score: number; shortLabel: string }[] }[];
+  /** Optional competitive MSP landscape (from generate-competitive API). */
+  competitiveLandscape?: CompetitiveLandscapeOutput;
 }
 
 const MAX_SECTION = 25;
@@ -374,6 +377,7 @@ export function AssessmentPDFDocument({ data }: { data: PDFData }) {
     logoMainPath,
     logoSymbolPath,
     sectionQuestionDetails,
+    competitiveLandscape,
   } = data;
 
   const sectionNums: number[] = [1, 2, 3, 4, 5, 6];
@@ -514,6 +518,45 @@ export function AssessmentPDFDocument({ data }: { data: PDFData }) {
           </ContentPage>
         );
       })}
+
+      {/* Competitive MSP Landscape */}
+      {competitiveLandscape && competitiveLandscape.competitors?.length > 0 && (
+        <ContentPage logoPath={logoSymbolPath}>
+          <Text style={styles.h1}>Competitive MSP Landscape</Text>
+          <View style={{ marginBottom: 12 }}>
+            <View style={[styles.tableHeader, { backgroundColor: BRAND.lightGray }]}>
+              <Text style={[styles.col1, { fontWeight: 600 }]}>Competitor</Text>
+              <Text style={[styles.col2, { fontWeight: 600 }]}>MSP Program</Text>
+              <Text style={[styles.col3, { fontWeight: 600 }]}>Distributors</Text>
+              <Text style={[styles.col4, { fontWeight: 600 }]}>Key Finding</Text>
+            </View>
+            {competitiveLandscape.competitors.map((c, i) => (
+              <View
+                key={i}
+                style={[
+                  i % 2 === 1 ? styles.tableRowAlt : styles.table,
+                  c.mspProgramStatus === "No Public MSP Program Found"
+                    ? { backgroundColor: GREEN_TINT }
+                    : undefined,
+                ]}
+              >
+                <Text style={styles.col1}>{c.name}</Text>
+                <Text style={[styles.col2, { fontSize: 9 }]}>{c.mspProgramStatus}</Text>
+                <Text style={[styles.col3, { fontSize: 9 }]}>
+                  {c.distributorPresence?.length ? c.distributorPresence.join(", ") : "—"}
+                </Text>
+                <Text style={[styles.col4, { fontSize: 9 }]}>{c.programEvidence}</Text>
+              </View>
+            ))}
+          </View>
+          <Text style={[styles.h3, { marginTop: 12, marginBottom: 6 }]}>Landscape summary</Text>
+          <Text style={styles.body}>{competitiveLandscape.landscapeSummary}</Text>
+          <Text style={[styles.h3, { marginTop: 12, marginBottom: 6 }]}>Distributor opportunity</Text>
+          <Text style={styles.body}>{competitiveLandscape.distributorOpportunity}</Text>
+          <Text style={[styles.h3, { marginTop: 12, marginBottom: 6 }]}>Strategic implication</Text>
+          <Text style={styles.body}>{competitiveLandscape.strategicImplication}</Text>
+        </ContentPage>
+      )}
 
       {/* Financial Impact */}
       <ContentPage logoPath={logoSymbolPath}>

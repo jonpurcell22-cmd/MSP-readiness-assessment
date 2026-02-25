@@ -1,8 +1,5 @@
 import { NextResponse } from "next/server";
 import { getServerSupabase } from "@/lib/supabase";
-import { getNarrative } from "@/lib/narrative";
-import { renderAssessmentPDF } from "@/lib/pdf-build";
-import { sendAssessmentEmails } from "@/lib/send-emails";
 import type {
   ContactInfo,
   FinancialData,
@@ -116,40 +113,10 @@ export async function POST(request: Request) {
       );
     }
 
-    const narrative = await getNarrative(payload);
-    const { error: updateError } = await supabase
-      .from("assessments")
-      .update({ ai_narrative: narrative } as never)
-      .eq("id", data.id);
-    if (updateError) {
-      console.error("Failed to store narrative:", updateError);
-      // Still return success; assessment was saved
-    }
-
-    // Generate PDF and send emails before returning so they run reliably in serverless (no background kill).
-    // Send emails even if PDF fails (without attachment).
-    let pdfBuffer: Buffer | undefined;
-    try {
-      pdfBuffer = await renderAssessmentPDF({ ...payload, narrative });
-    } catch (pdfErr) {
-      console.error("[submit] PDF generation failed:", pdfErr);
-      console.error("[submit] Error details:", pdfErr instanceof Error ? pdfErr.message : String(pdfErr));
-    }
-    let emailSent = true;
-    try {
-      await sendAssessmentEmails({ payload, narrative, pdfBuffer });
-    } catch (emailErr) {
-      console.error("[submit] Email send failed:", emailErr);
-      console.error("[submit] Error details:", emailErr instanceof Error ? emailErr.message : String(emailErr));
-      emailSent = false;
-      // Still return 200 with narrative so the user sees their AI summary; client can show "email not sent" warning
-    }
-
+    // Narrative, PDF, and emails are generated asynchronously via client 3-part flow + finalize.
     return NextResponse.json({
       id: data.id,
       created_at: data.created_at,
-      narrative,
-      emailSent,
     });
   } catch (e) {
     console.error("Submit API error:", e);

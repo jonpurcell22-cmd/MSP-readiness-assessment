@@ -5,6 +5,9 @@ export const metadata: Metadata = {
   title: "MSP Channel Readiness Assessment | Untapped Channel Strategy",
   description:
     "Find out in 10 minutes. Get a personalized readiness score and financial impact analysis for your MSP partner program.",
+  icons: {
+    icon: "/images/Untapped%20Channel%20Logo%20Symbol%20Transparent%20bg.svg",
+  },
 };
 
 export default function RootLayout({

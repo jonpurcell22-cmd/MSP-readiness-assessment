@@ -1,4 +1,4 @@
-import { AssessmentSection } from "@/components/AssessmentSection";
+import { AssessmentSection } from "@/components/AssessmentSectionPage";
 import { sectionOrganizationConfig } from "@/data/section-organization";
 
 export default function AssessmentOrganizationPage() {

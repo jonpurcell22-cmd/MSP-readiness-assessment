@@ -200,9 +200,9 @@ export const sectionProductConfig: AssessmentSectionConfig = {
         {
           score: 4,
           shortLabel:
-            "Good reporting with per-client breakdowns, multiple formats, some branding, scheduled delivery",
+            "Reporting meets basic MSP needs with per-client breakdowns, multiple formats, some branding, scheduled delivery",
           fullDescription:
-            "Good reporting with per-client breakdowns, multiple formats, some branding, scheduled delivery. MSPs can run renewals with confidence.",
+            "Reporting meets basic MSP needs with per-client breakdowns, multiple formats, some branding, scheduled delivery. MSPs can run renewals with confidence.",
         },
         {
           score: 5,

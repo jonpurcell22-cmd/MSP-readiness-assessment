@@ -1,4 +1,4 @@
-import { AssessmentSection } from "@/components/AssessmentSection";
+import { AssessmentSection } from "@/components/AssessmentSectionPage";
 import { sectionProductConfig } from "@/data/section-product";
 
 export default function AssessmentProductPage() {

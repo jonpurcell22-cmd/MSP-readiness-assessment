@@ -7,6 +7,7 @@ import sgMail from "@sendgrid/mail";
 import { TIER_LABELS, TIER_INTERPRETATIONS } from "@/lib/scoring";
 import type { ReadinessTier } from "@/types/assessment";
 import type { NarrativeOutput } from "@/lib/narrative";
+import type { CompetitiveLandscapeOutput } from "@/types/competitive";
 
 /** Minimal payload shape for email templates (matches submit payload). */
 export interface AssessmentEmailPayload {
@@ -57,10 +58,15 @@ function buildUserEmailBody(
   payload: AssessmentEmailPayload,
   tierLabel: string,
   tierSummary: string,
-  bookingUrl: string
+  bookingUrl: string,
+  competitiveLandscape?: CompetitiveLandscapeOutput | null
 ): string {
   const firstName = getFirstName(payload.contact.fullName);
   const score = payload.computed.overallScore;
+  const competitiveLine =
+    competitiveLandscape?.competitors?.length != null && competitiveLandscape.competitors.length > 0
+      ? `\nYour report includes a competitive MSP landscape analysis showing how ${competitiveLandscape.competitors.length} competitors are positioned in the MSP channel.\n`
+      : "";
   return `Hi ${firstName},
 
 Thank you for completing the MSP Channel Readiness Assessment. Your full report is attached.
@@ -69,7 +75,7 @@ Your Score: ${score}/100 - ${tierLabel}
 
 ${tierSummary}
 
-The attached PDF includes your section-by-section breakdown, financial impact projections, and a recommended roadmap based on where you scored.
+The attached PDF includes your section-by-section breakdown, financial impact projections, and a recommended roadmap based on where you scored.${competitiveLine}
 
 If you'd like to go deeper, I offer a complimentary 90-minute deep-dive assessment where we walk through each dimension in detail and build a customized action plan. No cost, no obligation.
 
@@ -127,6 +133,8 @@ export interface SendAssessmentEmailsParams {
   /** Optional; when missing (e.g. PDF generation failed), emails are sent without attachment */
   pdfBuffer?: Buffer | null;
   bookingUrl?: string;
+  /** Optional competitive landscape; when present, user email mentions it */
+  competitiveLandscape?: CompetitiveLandscapeOutput | null;
 }
 
 /**
@@ -138,6 +146,7 @@ export async function sendAssessmentEmails({
   narrative,
   pdfBuffer,
   bookingUrl = process.env.NEXT_PUBLIC_BOOKING_URL || process.env.BOOKING_URL || "https://calendly.com/jon-untappedchannelstrategy",
+  competitiveLandscape,
 }: SendAssessmentEmailsParams): Promise<{ userId?: string; adminId?: string }> {
   console.log("[send-emails] Starting... to:", payload.contact.email);
   const hasPdf = pdfBuffer && pdfBuffer.length > 0;
@@ -175,7 +184,7 @@ export async function sendAssessmentEmails({
     from: FROM,
     replyTo: REPLY_TO,
     subject: subjectUser,
-    text: buildUserEmailBody(payload, tierLabel, tierSummary, bookingUrl),
+    text: buildUserEmailBody(payload, tierLabel, tierSummary, bookingUrl, competitiveLandscape),
     ...(attachment && { attachments: attachment }),
   };
 
