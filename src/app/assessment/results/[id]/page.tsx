@@ -79,7 +79,7 @@ export default async function ResultsPage({
     current_arr: 0,
     avg_contract_value: 12000,
     estimated_cac: 5000,
-    quarterly_new_customers: 10,
+    annual_new_customers: 40,
   }
 
   const projections = calculateProjections(

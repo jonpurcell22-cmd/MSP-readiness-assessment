@@ -7,7 +7,7 @@ export interface FinancialInputs {
   current_arr?: number;
   avg_contract_value?: number;
   estimated_cac?: number;
-  quarterly_new_customers?: number;
+  annual_new_customers?: number;
 }
 
 export interface ProjectionYear {

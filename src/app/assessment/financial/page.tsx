@@ -1,6 +1,6 @@
 "use client"
 
-import { Suspense, useState } from "react"
+import { Suspense, useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { AssessmentLayout } from "@/components/assessment-layout"
 import { Button } from "@/components/ui/button"
@@ -17,11 +17,20 @@ function FinancialContextContent() {
 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
+  const [section7Skipped, setSection7Skipped] = useState<boolean | null>(null)
 
   const [currentArr, setCurrentArr] = useState("")
   const [avgContractValue, setAvgContractValue] = useState("")
   const [estimatedCac, setEstimatedCac] = useState("")
-  const [quarterlyNewCustomers, setQuarterlyNewCustomers] = useState("")
+  const [annualNewCustomers, setAnnualNewCustomers] = useState("")
+
+  useEffect(() => {
+    if (!assessmentId) return
+    fetch(`/api/assessment/${assessmentId}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => data && setSection7Skipped(!!data.section_7_skipped))
+      .catch(() => {})
+  }, [assessmentId])
 
   function formatDollar(val: string): string {
     const num = val.replace(/[^\d]/g, "")
@@ -40,8 +49,11 @@ function FinancialContextContent() {
       if (!res.ok) throw new Error("Failed to fetch assessment")
       const assessment = await res.json()
 
-      // Calculate scores
-      const sectionScores = calculateSectionScores(assessment.answers || {})
+      // Calculate scores (respect section_7_skipped for greenfield)
+      let sectionScores = calculateSectionScores(assessment.answers || {})
+      if (assessment.section_7_skipped === true && sectionScores) {
+        sectionScores = { ...sectionScores, section7: null }
+      }
       const totalScore = calculateTotalScore(sectionScores)
       const tier = getTier(totalScore)
 
@@ -50,7 +62,7 @@ function FinancialContextContent() {
         current_arr: Number(currentArr.replace(/[^\d]/g, "")) || 0,
         avg_contract_value: Number(avgContractValue.replace(/[^\d]/g, "")) || 0,
         estimated_cac: Number(estimatedCac.replace(/[^\d]/g, "")) || 0,
-        quarterly_new_customers: Number(quarterlyNewCustomers) || 0,
+        annual_new_customers: Number(annualNewCustomers) || 0,
       }
 
       const updatedAnswers = {
@@ -180,18 +192,18 @@ function FinancialContextContent() {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="quarterly">
-                Quarterly New Customer Additions
+              <Label htmlFor="annual-customers">
+                Annual New Customer Additions
               </Label>
               <Input
-                id="quarterly"
+                id="annual-customers"
                 type="number"
-                value={quarterlyNewCustomers}
-                onChange={(e) => setQuarterlyNewCustomers(e.target.value)}
-                placeholder="10"
+                value={annualNewCustomers}
+                onChange={(e) => setAnnualNewCustomers(e.target.value)}
+                placeholder="40"
               />
               <p className="text-xs text-muted-foreground">
-                Average number of new customers acquired per quarter.
+                Total number of new customers acquired per year.
               </p>
             </div>
           </CardContent>
@@ -205,7 +217,11 @@ function FinancialContextContent() {
           <Button
             variant="outline"
             onClick={() =>
-              router.push(`/assessment/7?id=${assessmentId}`)
+              router.push(
+                section7Skipped
+                  ? `/assessment/channel-gate?id=${assessmentId}`
+                  : `/assessment/7?id=${assessmentId}`
+              )
             }
           >
             <ChevronLeft className="mr-1 h-4 w-4" />
