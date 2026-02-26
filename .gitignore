@@ -37,6 +37,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# renamed from app/ so Next.js uses src/app (fixes 404)
+app-config/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
