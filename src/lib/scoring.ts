@@ -80,6 +80,11 @@ export function computeOverallScore(totals: SectionTotals): number {
   return Math.round(normalized);
 }
 
+/** Normalize raw or 0–100 score for display (e.g. admin table). */
+export function toPercentageScore(score: number): number {
+  return Math.round(Math.min(100, Math.max(0, score)));
+}
+
 // --- Readiness tier from overall score ---
 
 export function getReadinessTier(overallScore: number): ReadinessTier {
@@ -87,6 +92,17 @@ export function getReadinessTier(overallScore: number): ReadinessTier {
   if (overallScore >= 65) return "capable";
   if (overallScore >= 45) return "emerging";
   return "premature";
+}
+
+/** Alias for results-by-id page and other consumers. */
+export type Tier = ReadinessTier;
+
+/** Alias for getReadinessTier. */
+export const getTier = getReadinessTier;
+
+/** Tier definition copy for display. */
+export function getTierDescription(tier: ReadinessTier): string {
+  return TIER_DEFINITIONS[tier];
 }
 
 // --- Red flag detection (spec rules) ---

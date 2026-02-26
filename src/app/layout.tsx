@@ -1,13 +1,20 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
+import { Inter } from "next/font/google";
 import "./globals.css";
+
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "MSP Channel Readiness Assessment | Untapped Channel Strategy",
   description:
-    "Find out in 10 minutes. Get a personalized readiness score and financial impact analysis for your MSP partner program.",
+    "Evaluate your readiness to build a profitable MSP channel program. Get a personalized scorecard, competitive analysis, and financial projections.",
   icons: {
     icon: "/images/Untapped%20Channel%20Logo%20Symbol%20Transparent%20bg.svg",
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#4cf37b",
 };
 
 export default function RootLayout({
@@ -17,7 +24,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="antialiased min-h-screen bg-[#F4F7FA] text-[#1B3A5C] font-sans">
+      <body className={`${inter.className} antialiased min-h-screen bg-background text-foreground`}>
         {children}
       </body>
     </html>

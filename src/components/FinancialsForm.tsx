@@ -218,13 +218,13 @@ export function FinancialsForm() {
       <div className="mt-4 flex flex-row flex-wrap justify-between gap-4">
         <Link
           href="/assessment/channel-health"
-          className="inline-flex items-center justify-center rounded-lg border border-[#1B3A5C]/30 bg-white px-6 py-3 font-medium text-[#1B3A5C] hover:bg-[#1B3A5C]/5"
+          className="inline-flex h-11 items-center justify-center rounded-lg border border-border bg-background px-6 py-3 font-medium text-[#333333] transition-all duration-200 hover:bg-muted hover:scale-[1.02]"
         >
           ← Previous
         </Link>
         <button
           type="submit"
-          className="inline-flex items-center justify-center rounded-lg bg-[#1A8A7D] px-6 py-3 font-semibold text-white hover:bg-[#157a6e] focus:outline-none focus:ring-2 focus:ring-[#1A8A7D] focus:ring-offset-2"
+          className="inline-flex h-11 items-center justify-center rounded-lg bg-[#4cf37b] px-6 py-3 font-semibold text-white shadow-md transition-all duration-200 hover:scale-[1.02] hover:bg-[#4cf37b]/90 focus:outline-none focus:ring-2 focus:ring-[#4cf37b] focus:ring-offset-2"
         >
           See My Results →
         </button>

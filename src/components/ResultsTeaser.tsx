@@ -743,7 +743,7 @@ export function ResultsTeaser() {
               {redFlags.map((flag, i) => (
                 <div
                   key={i}
-                  className="rounded-xl border-l-4 border-red-500 bg-red-50/50 p-4 text-sm text-[#1B3A5C]"
+                  className="rounded-xl border-l-4 border-[#4cf37b] bg-[#4cf37b]/10 p-4 text-sm text-[#333333]"
                 >
                   {flag}
                 </div>
@@ -765,7 +765,7 @@ export function ResultsTeaser() {
             </p>
           )}
           {submitStatus === "error" && (
-            <div className="rounded-xl border-l-4 border-red-500 bg-red-50/50 p-4 text-sm text-[#1B3A5C]">
+            <div className="rounded-xl border-l-4 border-[#4cf37b] bg-[#4cf37b]/10 p-4 text-sm text-[#333333]">
               <p className="font-medium">We couldn&apos;t save your assessment.</p>
               {submitError && <p className="mt-1 text-[#1B3A5C]/80">{submitError}</p>}
               <p className="mt-1">Please try again or contact{" "}

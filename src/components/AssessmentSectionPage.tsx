@@ -138,7 +138,11 @@ export function AssessmentSection({ config }: { config: AssessmentSectionConfig 
   const [showValidationErrors, setShowValidationErrors] = useState(false);
 
   const prevHref =
-    sectionNumber === 1 ? "/" : ASSESSMENT_SECTION_ROUTES[sectionNumber - 2];
+    sectionNumber === 1
+      ? "/"
+      : sectionNumber === 7
+        ? "/assessment/channel-health"
+        : ASSESSMENT_SECTION_ROUTES[sectionNumber - 2];
   const nextHref =
     sectionNumber === TOTAL_SECTIONS
       ? "/assessment/financials"
