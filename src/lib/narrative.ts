@@ -258,6 +258,7 @@ Return ONLY valid JSON (no markdown, no backticks, no preamble). Every string mu
 }
 
 Include one object in section_interpretations for each of sections 1 through 6, and section 7 only if Section 7 Skipped is false. Use exact section_name values: "MSP-Ready Product Architecture", "Pricing & Partner Economics", "Organizational & GTM Readiness", "Partner Ecosystem & Recruitment", "Enablement & Partner Experience", "Competitive & Distribution Landscape", "Existing MSP Channel Health". Every interpretation must name at least one question and score; every recommendation must be concrete and tied to their data. Do not repeat the same point across sections.`;
+}
 
 /** Shared context block for part-specific prompts. */
 function narrativeContextBlock(data: NarrativeInput): string {
@@ -305,13 +306,32 @@ Return ONLY valid JSON (no markdown, no backticks, no preamble):
 Every item must cite specific questions and scores. No generic phrases.`;
 }
 
-/** Part 2 prompt: section interpretations for all sections. */
+/** Part 2 prompt: section interpretations — answer-specific, no generic template language. */
 export function buildNarrativePromptPart2(data: NarrativeInput): string {
   const context = narrativeContextBlock(data);
   const sectionList = data.section7Skipped
     ? "1 through 6"
     : "1 through 7";
   return `${context}
+
+Your job: For each section, write a 2-3 sentence interpretation and one concrete recommendation. Every sentence MUST be specific to this vendor's actual answers. No generic filler.
+
+For EACH section you MUST:
+1. Name the specific question(s) where they scored LOWEST (use the exact question names from the data, e.g. "Billing & Invoicing Flexibility", "Multi-Tenant Management") and state the score (e.g. "2/5"). Explain the operational impact of those gaps on MSP partner experience — what breaks for the MSP in practice (margin, billing, onboarding, conflict, etc.).
+2. Name the specific question(s) where they scored HIGHEST in that section (by name) and acknowledge the strength in concrete terms.
+3. Connect the section to their product category (${data.productCategory}) and company context where relevant.
+
+EXAMPLE of what TO write (answer-specific, operational):
+"Your margins at 35%+ are strong enough to attract MSP interest, but the lack of monthly per-unit billing and aggregate invoicing will stop most MSP conversations before they start. MSPs in cybersecurity expect to add seats mid-month and bill monthly. Until billing flexibility catches up to your margin story, partners will evaluate but won't commit."
+
+BANNED — never use these or any similar generic phrases:
+- "Solid foundation, but MSPs will compare you to vendors who have nailed this"
+- "That is a blocker; no amount of partner recruitment will overcome it until it is fixed"
+- "That is a competitive advantage; MSPs will notice"
+- "Leverage this strength in partner recruitment and positioning"
+- "Identify the top two gaps in this dimension and address them before launch"
+- "Prioritize product, pricing, or operational changes in this area before scaling the channel"
+- "Room to improve" / "areas for improvement" / "key areas to focus on"
 
 Return ONLY valid JSON (no markdown, no backticks, no preamble). Include one object in section_interpretations for sections ${sectionList}. Use exact section_name: "MSP-Ready Product Architecture", "Pricing & Partner Economics", "Organizational & GTM Readiness", "Partner Ecosystem & Recruitment", "Enablement & Partner Experience", "Competitive & Distribution Landscape", "Existing MSP Channel Health" (only include section 7 if Section 7 Skipped is false).
 
@@ -320,13 +340,11 @@ Return ONLY valid JSON (no markdown, no backticks, no preamble). Include one obj
     {
       "section_number": 1,
       "section_name": "MSP-Ready Product Architecture",
-      "interpretation": "2-4 sentences. Name at least one question and its score. What it means for MSPs operationally.",
-      "recommendation": "One concrete action tied to their scores in this section."
+      "interpretation": "2-3 sentences. Name their lowest-scored question(s) in this section by name and score; explain operational impact on MSPs. Name their highest-scored question(s) and the strength. Tie to their product category where relevant.",
+      "recommendation": "One concrete action tied to the specific gaps you named, not a generic line."
     }
   ]
-}
-
-Every interpretation must name at least one question and score; every recommendation must be concrete.`;
+}`;
 }
 
 /** Part 3 prompt: financial commentary, cost of delay, roadmap. */
@@ -348,6 +366,83 @@ function sectionTier(total: number): "high" | "mid" | "low" {
   return "low";
 }
 
+/** Build section interpretations that name actual questions and scores (no generic template phrases). */
+function buildFallbackSectionInterpretations(payload: PayloadForNarrative): SectionInterpretation[] {
+  const pairs = getSectionNumsWithTotals(
+    payload.computed.sectionTotals,
+    payload.computed.section7Skipped
+  );
+  const sections: SectionInterpretation[] = [];
+  const productCategory = payload.contact.productCategory || "your category";
+
+  const sectionKeys = ["section1", "section2", "section3", "section4", "section5", "section6", "section7"] as const;
+  for (const { num, total } of pairs) {
+    const sectionScores = (payload as Record<string, { q1: number; q2: number; q3: number; q4: number; q5: number } | null>)[
+      sectionKeys[num - 1]
+    ];
+    const names = SECTION_QUESTION_NAMES[num as keyof typeof SECTION_QUESTION_NAMES];
+    const sectionName = SECTION_NAMES[num];
+
+    if (!sectionScores || !names) {
+      sections.push({
+        section_number: num,
+        section_name: sectionName,
+        interpretation: `You scored ${total}/25 in ${sectionName}. Review your individual question scores above to see where to focus.`,
+        recommendation: "Address the lowest-scored dimensions in this section before scaling partner recruitment.",
+      });
+      continue;
+    }
+
+    const qScores = [
+      { name: names[0], score: sectionScores.q1 },
+      { name: names[1], score: sectionScores.q2 },
+      { name: names[2], score: sectionScores.q3 },
+      { name: names[3], score: sectionScores.q4 },
+      { name: names[4], score: sectionScores.q5 },
+    ];
+    const byScoreAsc = [...qScores].sort((a, b) => a.score - b.score);
+    const lowest = byScoreAsc.filter((q) => q.score <= 2);
+    const highest = byScoreAsc.filter((q) => q.score >= 4).reverse();
+
+    const lowestPhrase =
+      lowest.length > 0
+        ? lowest
+            .map((q) => `${q.name} (${q.score}/5)`)
+            .join(" and ")
+        : null;
+    const highestPhrase =
+      highest.length > 0
+        ? highest
+            .map((q) => `${q.name} (${q.score}/5)`)
+            .join(" and ")
+        : null;
+
+    let interpretation: string;
+    if (lowestPhrase && highestPhrase) {
+      interpretation = `Your lowest scores in ${sectionName} are ${lowestPhrase}. Those gaps directly affect MSP partner experience — without strength in these areas, partners will hesitate or churn. Your strongest dimensions here are ${highestPhrase}; use those in your positioning. In ${productCategory}, MSPs will weigh these factors when evaluating you.`;
+    } else if (lowestPhrase) {
+      interpretation = `In ${sectionName}, your lowest-scored areas are ${lowestPhrase}. These gaps impact how MSPs can deliver and margin they can make; address them before scaling recruitment. ${highestPhrase ? `Your strength in ${highestPhrase} gives you a starting point.` : ""}`.trim();
+    } else if (highestPhrase) {
+      interpretation = `You scored ${total}/25 in ${sectionName}, with strength in ${highestPhrase}. Leverage these in partner conversations and recruitment. Identify any remaining gaps in this section before launch.`;
+    } else {
+      interpretation = `You scored ${total}/25 in ${sectionName}. Review your individual question scores above; focus on moving any 3s to 4s where it matters most for MSPs in ${productCategory}.`;
+    }
+
+    const recommendation = lowest.length > 0
+      ? `Fix or improve ${lowest.map((q) => q.name).join(" and ")} before investing in partner recruitment in this dimension.`
+      : "Use your strengths in this section in your partner messaging; shore up any mid-range scores next.";
+
+    sections.push({
+      section_number: num,
+      section_name: sectionName,
+      interpretation,
+      recommendation,
+    });
+  }
+
+  return sections;
+}
+
 /** Section order for fallback: by section number, only those present (1-6 or 1-7). */
 function getSectionNumsWithTotals(
   sectionTotals: { section1: number; section2: number; section3: number; section4: number; section5: number; section6: number; section7: number | null },
@@ -365,7 +460,7 @@ function getSectionNumsWithTotals(
   return pairs;
 }
 
-/** Templated narrative when Claude API fails or is unavailable. Uses actual section totals and red flags so it reads less generic. */
+/** Templated narrative when Claude API fails or is unavailable. Section interpretations use actual question names (no generic template phrases). */
 export function generateFallbackNarrative(payload: {
   contact: { companyName: string; productCategory?: string };
   computed: {
@@ -384,7 +479,7 @@ export function generateFallbackNarrative(payload: {
     section7Skipped: boolean;
   };
   financials: { arr: number | null; acv: number | null; productCategory?: string };
-}): NarrativeOutput {
+} & Record<string, unknown>): NarrativeOutput {
   const t = payload.computed.sectionTotals;
   const tier = payload.computed.readinessTier;
   const section7Skipped = payload.computed.section7Skipped;
@@ -393,28 +488,7 @@ export function generateFallbackNarrative(payload: {
   const weakest = byTotalAsc.slice(0, 2);
   const strongest = byTotalAsc[byTotalAsc.length - 1];
 
-  const sections: SectionInterpretation[] = [];
-  for (const { num, total } of pairs) {
-    const st = sectionTier(total);
-    let interpretation: string;
-    let recommendation: string;
-    if (st === "high") {
-      interpretation = `You scored ${total}/25 in ${SECTION_NAMES[num]}. That is a competitive advantage; MSPs will notice.`;
-      recommendation = "Leverage this strength in partner recruitment and positioning.";
-    } else if (st === "mid") {
-      interpretation = `You scored ${total}/25 in ${SECTION_NAMES[num]}. Solid foundation, but MSPs will compare you to vendors who have nailed this.`;
-      recommendation = "Identify the top two gaps in this dimension and address them before launch.";
-    } else {
-      interpretation = `You scored ${total}/25 in ${SECTION_NAMES[num]}. That is a blocker; no amount of partner recruitment will overcome it until this is fixed.`;
-      recommendation = "Prioritize product, pricing, or operational changes in this area before scaling the channel.";
-    }
-    sections.push({
-      section_number: num,
-      section_name: SECTION_NAMES[num],
-      interpretation,
-      recommendation,
-    });
-  }
+  const sections = buildFallbackSectionInterpretations(payload as PayloadForNarrative);
 
   const tierLabel =
     tier === "ready"
@@ -539,9 +613,8 @@ export async function getNarrativePart2(payload: PayloadForNarrative): Promise<N
     if (!Array.isArray(parsed.section_interpretations)) throw new Error("Invalid part 2 structure");
     return parsed;
   } catch (err) {
-    console.error("AI narrative part 2 failed, using fallback:", err);
-    const full = generateFallbackNarrative(payload);
-    return { section_interpretations: full.section_interpretations };
+    console.error("AI narrative part 2 failed, using answer-specific fallback:", err);
+    return { section_interpretations: buildFallbackSectionInterpretations(payload) };
   }
 }
 

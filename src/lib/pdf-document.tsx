@@ -520,9 +520,10 @@ export function AssessmentPDFDocument({ data }: { data: PDFData }) {
       })}
 
       {/* Competitive MSP Landscape */}
-      {competitiveLandscape && competitiveLandscape.competitors?.length > 0 && (
+      {competitiveLandscape && (competitiveLandscape.competitors?.length > 0 || competitiveLandscape.landscapeSummary) && (
         <ContentPage logoPath={logoSymbolPath}>
           <Text style={styles.h1}>Competitive MSP Landscape</Text>
+          {competitiveLandscape.competitors?.length > 0 && (
           <View style={{ marginBottom: 12 }}>
             <View style={[styles.tableHeader, { backgroundColor: BRAND.lightGray }]}>
               <Text style={[styles.col1, { fontWeight: 600 }]}>Competitor</Text>
@@ -549,6 +550,7 @@ export function AssessmentPDFDocument({ data }: { data: PDFData }) {
               </View>
             ))}
           </View>
+          )}
           <Text style={[styles.h3, { marginTop: 12, marginBottom: 6 }]}>Landscape summary</Text>
           <Text style={styles.body}>{competitiveLandscape.landscapeSummary}</Text>
           <Text style={[styles.h3, { marginTop: 12, marginBottom: 6 }]}>Distributor opportunity</Text>

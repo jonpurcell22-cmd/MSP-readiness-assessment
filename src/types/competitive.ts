@@ -28,10 +28,9 @@ export interface CompetitiveLandscapeOutput {
 export function isCompetitiveLandscapeOutput(value: unknown): value is CompetitiveLandscapeOutput {
   if (!value || typeof value !== "object") return false;
   const o = value as Record<string, unknown>;
-  return (
-    Array.isArray(o.competitors) &&
-    typeof o.landscapeSummary === "string" &&
-    typeof o.distributorOpportunity === "string" &&
-    typeof o.strategicImplication === "string"
-  );
+  if (!Array.isArray(o.competitors)) return false;
+  if (typeof o.landscapeSummary !== "string" || !o.landscapeSummary.trim()) return false;
+  if (typeof o.distributorOpportunity !== "string" || !o.distributorOpportunity.trim()) return false;
+  if (typeof o.strategicImplication !== "string" || !o.strategicImplication.trim()) return false;
+  return true;
 }

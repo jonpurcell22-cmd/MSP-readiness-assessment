@@ -546,9 +546,11 @@ export function ResultsTeaser() {
             }
             if (competitiveLandscape) {
               const oppStatus = "No Public MSP Program Found";
+              const hasCompetitors = competitiveLandscape.competitors?.length > 0;
               return (
                 <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition-opacity duration-300">
                   <h2 className="mb-4 text-lg font-semibold text-[#1B3A5C]">Competitive MSP Landscape</h2>
+                  {hasCompetitors && (
                   <div className="overflow-x-auto">
                     <table className="w-full min-w-[640px] text-sm">
                       <thead>
@@ -560,7 +562,7 @@ export function ResultsTeaser() {
                         </tr>
                       </thead>
                       <tbody className="text-[#1B3A5C]">
-                        {competitiveLandscape.competitors.map((c, i) => (
+                        {competitiveLandscape.competitors!.map((c, i) => (
                           <tr
                             key={i}
                             className={
@@ -593,7 +595,8 @@ export function ResultsTeaser() {
                       </tbody>
                     </table>
                   </div>
-                  <div className="mt-5 space-y-4 border-t border-gray-200 pt-5">
+                  )}
+                  <div className={hasCompetitors ? "mt-5 space-y-4 border-t border-gray-200 pt-5" : "space-y-4"}>
                     <div>
                       <h3 className="mb-1 text-sm font-semibold text-[#1B3A5C]">Landscape summary</h3>
                       <p className="text-sm text-[#1B3A5C]/90">{competitiveLandscape.landscapeSummary}</p>

@@ -118,8 +118,9 @@ export async function POST(request: Request) {
 
     clearTimeout(timeoutId);
 
-    const block = response.content[0];
-    const text = block?.type === "text" ? block.text : "";
+    // With web search, content may include tool_use blocks; use the last text block (final answer)
+    const textBlock = [...(response.content || [])].reverse().find((b) => b.type === "text");
+    const text = textBlock && "text" in textBlock ? textBlock.text : "";
     if (!text.trim()) {
       return NextResponse.json(
         { error: "Empty response from model" },
@@ -140,14 +141,80 @@ export async function POST(request: Request) {
       );
     }
 
-    return NextResponse.json(parsed);
+    return NextResponse.json(normalizeCompetitiveOutput(parsed));
   } catch (e) {
     console.error("Generate competitive API error:", e);
-    return NextResponse.json(
-      { error: e instanceof Error ? e.message : "Competitive research failed" },
-      { status: 500 }
-    );
+    // Fallback: try without web search so the section still appears with a basic summary
+    try {
+      const fallback = await generateCompetitiveFallback(body);
+      return NextResponse.json(fallback);
+    } catch (fallbackErr) {
+      console.error("Competitive fallback also failed:", fallbackErr);
+      return NextResponse.json(
+        { error: e instanceof Error ? e.message : "Competitive research failed" },
+        { status: 500 }
+      );
+    }
   }
+}
+
+/** Generate a basic competitive summary without web search (no live research). */
+async function generateCompetitiveFallback(
+  body: GenerateCompetitiveBody
+): Promise<CompetitiveLandscapeOutput> {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) throw new Error("ANTHROPIC_API_KEY not set");
+  const { default: Anthropic } = await import("@anthropic-ai/sdk");
+  const anthropic = new Anthropic({ apiKey });
+  const userPrompt = buildUserPrompt(body);
+  const FALLBACK_SYSTEM = `${SYSTEM_PROMPT}
+
+NOTE: You do NOT have web search available for this request. Base your response on your training knowledge of typical competitors and MSP channel dynamics in the vendor's product category. Be clear that this is a high-level view, not live research. Use "Based on typical market structure..." or similar framing. Still return valid JSON.`;
+  const response = await anthropic.messages.create({
+    model: "claude-sonnet-4-20250514",
+    max_tokens: 3000,
+    system: FALLBACK_SYSTEM,
+    messages: [{ role: "user", content: userPrompt }],
+  });
+  const textBlock = [...(response.content || [])].reverse().find((b) => b.type === "text");
+  const text = textBlock && "text" in textBlock ? textBlock.text : "";
+  if (!text.trim()) throw new Error("Empty fallback response");
+  let raw = text.trim();
+  const jsonMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (jsonMatch) raw = jsonMatch[1].trim();
+  const parsed = JSON.parse(raw) as CompetitiveLandscapeOutput;
+  if (!isCompetitiveLandscapeOutput(parsed)) throw new Error("Invalid fallback structure");
+  return normalizeCompetitiveOutput(parsed);
+}
+
+/** Ensure each competitor has required fields and consistent status strings. */
+function normalizeCompetitiveOutput(raw: CompetitiveLandscapeOutput): CompetitiveLandscapeOutput {
+  const statusOptions = [
+    "Established MSP Program",
+    "General Partner Program",
+    "Early/Limited MSP Program",
+    "No Public MSP Program Found",
+  ] as const;
+  const competitors = (raw.competitors || []).map((c) => {
+    const status =
+      typeof c.mspProgramStatus === "string" && statusOptions.includes(c.mspProgramStatus as (typeof statusOptions)[number])
+        ? (c.mspProgramStatus as (typeof statusOptions)[number])
+        : "No Public MSP Program Found";
+    return {
+      name: typeof c.name === "string" ? c.name : "Unknown",
+      website: typeof c.website === "string" ? c.website : "",
+      mspProgramStatus: status,
+      distributorPresence: Array.isArray(c.distributorPresence) ? c.distributorPresence : [],
+      programEvidence: typeof c.programEvidence === "string" ? c.programEvidence : "—",
+      mspRelevantWeakness: typeof c.mspRelevantWeakness === "string" ? c.mspRelevantWeakness : "Unknown",
+    };
+  });
+  return {
+    competitors,
+    landscapeSummary: String(raw.landscapeSummary ?? "").trim() || "Competitive landscape summary not available.",
+    distributorOpportunity: String(raw.distributorOpportunity ?? "").trim() || "Distributor opportunity analysis not available.",
+    strategicImplication: String(raw.strategicImplication ?? "").trim() || "Strategic implications not available.",
+  };
 }
 
 export async function GET() {
