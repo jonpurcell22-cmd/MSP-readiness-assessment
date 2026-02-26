@@ -538,7 +538,7 @@ export function AssessmentPDFDocument({ data }: { data: PDFData }) {
                   i % 2 === 1 ? styles.tableRowAlt : styles.table,
                   c.mspProgramStatus === "No Public MSP Program Found"
                     ? { backgroundColor: GREEN_TINT }
-                    : undefined,
+                    : {},
                 ]}
               >
                 <Text style={styles.col1}>{c.name}</Text>

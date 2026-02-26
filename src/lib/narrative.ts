@@ -377,9 +377,9 @@ function buildFallbackSectionInterpretations(payload: PayloadForNarrative): Sect
 
   const sectionKeys = ["section1", "section2", "section3", "section4", "section5", "section6", "section7"] as const;
   for (const { num, total } of pairs) {
-    const sectionScores = (payload as Record<string, { q1: number; q2: number; q3: number; q4: number; q5: number } | null>)[
-      sectionKeys[num - 1]
-    ];
+    const sectionScores = (
+      payload as unknown as Record<string, { q1: number; q2: number; q3: number; q4: number; q5: number } | null>
+    )[sectionKeys[num - 1]];
     const names = SECTION_QUESTION_NAMES[num as keyof typeof SECTION_QUESTION_NAMES];
     const sectionName = SECTION_NAMES[num];
 
