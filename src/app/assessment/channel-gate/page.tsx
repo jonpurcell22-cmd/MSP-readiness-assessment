@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { Suspense, useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { AssessmentLayout } from "@/components/assessment-layout"
 import { SectionStepper } from "@/components/section-stepper"
@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-export default function ChannelGatePage() {
+function ChannelGateContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const assessmentId = searchParams.get("id")
@@ -153,5 +153,21 @@ export default function ChannelGatePage() {
         </div>
       </div>
     </AssessmentLayout>
+  )
+}
+
+export default function ChannelGatePage() {
+  return (
+    <Suspense
+      fallback={
+        <AssessmentLayout>
+          <div className="flex min-h-[40vh] items-center justify-center">
+            <p className="text-muted-foreground">Loading...</p>
+          </div>
+        </AssessmentLayout>
+      }
+    >
+      <ChannelGateContent />
+    </Suspense>
   )
 }

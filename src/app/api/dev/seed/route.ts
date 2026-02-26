@@ -45,6 +45,7 @@ const TEST_ASSESSMENTS: AssessmentInsert[] = [
 
     pdf_url: null,
     ai_narrative: null,
+    completed_at: null,
   },
   {
     full_name: "Jordan Demo",
@@ -85,6 +86,7 @@ const TEST_ASSESSMENTS: AssessmentInsert[] = [
 
     pdf_url: null,
     ai_narrative: null,
+    completed_at: null,
   },
 ];
 
