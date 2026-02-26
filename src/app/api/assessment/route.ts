@@ -56,6 +56,7 @@ function startBodyToRow(body: StartAssessmentBody): AssessmentInsert {
 
     pdf_url: null,
     ai_narrative: null,
+    completed_at: null,
   };
 }
 
