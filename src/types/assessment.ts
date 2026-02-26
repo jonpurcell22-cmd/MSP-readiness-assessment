@@ -65,6 +65,9 @@ export type SectionKey =
   | "section6"
   | "section7";
 
+/** Per-section question answers (section id -> question key -> score). Used by assessment section page and stored in assessment payloads. */
+export type Answers = Partial<Record<SectionKey, Partial<SectionScores> & Record<string, number | undefined>>>;
+
 // --- Computed results ---
 
 export type ReadinessTier = "ready" | "capable" | "emerging" | "premature";

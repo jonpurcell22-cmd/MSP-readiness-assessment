@@ -9,6 +9,7 @@ import type {
   ComputedResults,
   ReadinessTier,
   AssessmentState,
+  Answers,
 } from "@/types/assessment";
 
 const QUESTIONS_PER_SECTION = 5;
@@ -64,6 +65,36 @@ export function computeSectionTotals(state: {
   };
 }
 
+// --- From Answers (assessment section page shape) to section totals ---
+
+function toSectionScoresOrNull(
+  partial: Partial<SectionScores> & Record<string, number | undefined> | undefined
+): SectionScores | null {
+  if (!partial || typeof partial.q1 !== "number") return null;
+  return {
+    q1: partial.q1 ?? 0,
+    q2: partial.q2 ?? 0,
+    q3: partial.q3 ?? 0,
+    q4: partial.q4 ?? 0,
+    q5: partial.q5 ?? 0,
+  };
+}
+
+/** Convert Answers (from assessment section page / API) to SectionTotals. Used by financial page. */
+export function calculateSectionScores(answers: Answers): SectionTotals {
+  const state = {
+    section1: toSectionScoresOrNull(answers.section1),
+    section2: toSectionScoresOrNull(answers.section2),
+    section3: toSectionScoresOrNull(answers.section3),
+    section4: toSectionScoresOrNull(answers.section4),
+    section5: toSectionScoresOrNull(answers.section5),
+    section6: toSectionScoresOrNull(answers.section6),
+    section7: toSectionScoresOrNull(answers.section7),
+    section7Skipped: null as boolean | null,
+  };
+  return computeSectionTotals(state);
+}
+
 // --- Overall score (normalized 0-100) ---
 
 export function computeOverallScore(totals: SectionTotals): number {
@@ -79,6 +110,9 @@ export function computeOverallScore(totals: SectionTotals): number {
   const normalized = (raw / max) * 100;
   return Math.round(normalized);
 }
+
+/** Alias for computeOverallScore. Used by financial page. */
+export const calculateTotalScore = computeOverallScore;
 
 /** Normalize raw or 0–100 score for display (e.g. admin table). */
 export function toPercentageScore(score: number): number {

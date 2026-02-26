@@ -10,7 +10,7 @@ import {
   Tooltip,
 } from "recharts"
 import { sections } from "@/lib/assessment-data"
-import type { SectionScores } from "@/lib/scoring"
+import type { SectionTotals } from "@/types/assessment"
 
 const shortLabels: Record<string, string> = {
   section_1: "Pricing & Econ",
@@ -25,11 +25,11 @@ const shortLabels: Record<string, string> = {
 export function ResultsRadarChart({
   sectionScores,
 }: {
-  sectionScores: SectionScores
+  sectionScores: SectionTotals
 }) {
   const data = sections.map((s) => ({
     subject: shortLabels[s.id] || s.title,
-    score: sectionScores[s.id] || 0,
+    score: sectionScores[s.id] ?? 0,
     fullMark: 25,
   }))
 
@@ -53,7 +53,7 @@ export function ResultsRadarChart({
             borderRadius: "8px",
             fontSize: 13,
           }}
-          formatter={(value: number) => [`${value}/25`, "Score"]}
+          formatter={(value: number | undefined) => [`${value ?? 0}/25`, "Score"]}
         />
         <Radar
           name="Score"

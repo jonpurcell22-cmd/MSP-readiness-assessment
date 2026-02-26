@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { ScoreBar } from "@/components/score-bar"
 import { ChevronDown, ChevronUp } from "lucide-react"
-import type { Section } from "@/lib/assessment-data"
+import type { AssessmentSectionData } from "@/lib/assessment-data"
 import { cn } from "@/lib/utils"
 
 export function SectionResultCard({
@@ -13,7 +13,7 @@ export function SectionResultCard({
   interpretation,
   answers,
 }: {
-  section: Section
+  section: AssessmentSectionData
   score: number
   interpretation: string
   answers: Record<string, number>

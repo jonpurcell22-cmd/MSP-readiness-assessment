@@ -8,12 +8,19 @@ import { SectionResultCard } from "@/components/section-result-card"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { sections } from "@/lib/assessment-data"
-import type { Tier, SectionScores, Answers } from "@/lib/scoring"
+import type { Tier } from "@/lib/scoring"
+import type { SectionTotals, Answers } from "@/types/assessment"
 import { toPercentageScore } from "@/lib/scoring"
-import type { FinancialProjection } from "@/lib/financial-projections"
+import type { ProjectionsResult, FinancialInputs } from "@/lib/financial-projections"
 import { formatCurrency } from "@/lib/financial-projections"
-import type { CompetitorInsight } from "@/lib/mock-ai"
 import { Calendar, Mail, Phone, FileDown, Compass } from "lucide-react"
+
+interface CompetitorInsight {
+  company: string
+  strength: string
+  channelApproach: string
+  opportunity: string
+}
 
 interface ResultsContentProps {
   assessment: {
@@ -21,8 +28,8 @@ interface ResultsContentProps {
     company_name: string
     contact_name: string
     email: string
-    answers: Answers & { financial?: Record<string, unknown> }
-    section_scores: SectionScores
+    answers: Answers & { financial?: FinancialInputs }
+    section_scores: SectionTotals
     total_score: number
     tier: Tier
   }
@@ -31,7 +38,64 @@ interface ResultsContentProps {
   executiveSummary: string
   sectionInterpretations: Record<string, string>
   competitiveLandscape: { summary: string; competitors: CompetitorInsight[] }
-  projections: FinancialProjection
+  projections: ProjectionsResult
+}
+
+/** Derive display shape from ProjectionsResult for the financial table and cards. */
+function toProjectionsDisplay(p: ProjectionsResult): {
+  yearlyProjections: Array<{
+    year: number
+    newPartners: number
+    avgDealsPerPartner: number
+    channelDeals: number
+    channelRevenue: number
+    netSavings: number
+    cumulativeRevenue: number
+  }>
+  costOfDelay: number
+  diyEstimate: { cost: number; timeMonths: number; risk: string }
+  expertEstimate: { cost: number; timeMonths: number; risk: string }
+} {
+  const y1 = p.year1
+  const y2 = p.year2
+  const y3 = p.year3
+  const cum1 = y1.revenue
+  const cum2 = cum1 + y2.revenue
+  const cum3 = cum2 + y3.revenue
+  return {
+    yearlyProjections: [
+      {
+        year: 1,
+        newPartners: y1.partners,
+        avgDealsPerPartner: y1.totalClients / y1.partners || 0,
+        channelDeals: y1.totalClients,
+        channelRevenue: y1.revenue,
+        netSavings: 0,
+        cumulativeRevenue: cum1,
+      },
+      {
+        year: 2,
+        newPartners: y2.partners,
+        avgDealsPerPartner: y2.totalClients / y2.partners || 0,
+        channelDeals: y2.totalClients,
+        channelRevenue: y2.revenue,
+        netSavings: 0,
+        cumulativeRevenue: cum2,
+      },
+      {
+        year: 3,
+        newPartners: y3.partners,
+        avgDealsPerPartner: y3.totalClients / y3.partners || 0,
+        channelDeals: y3.totalClients,
+        channelRevenue: y3.revenue,
+        netSavings: 0,
+        cumulativeRevenue: cum3,
+      },
+    ],
+    costOfDelay: 0,
+    diyEstimate: { cost: 0, timeMonths: 0, risk: "—" },
+    expertEstimate: { cost: 0, timeMonths: 0, risk: "—" },
+  }
 }
 
 export function ResultsContent({
@@ -41,8 +105,9 @@ export function ResultsContent({
   executiveSummary,
   sectionInterpretations,
   competitiveLandscape,
-  projections,
+  projections: projectionsRaw,
 }: ResultsContentProps) {
+  const projections = toProjectionsDisplay(projectionsRaw)
   return (
     <AssessmentLayout>
       <div className="flex flex-col gap-14">

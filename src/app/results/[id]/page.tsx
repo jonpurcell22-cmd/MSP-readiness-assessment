@@ -2,7 +2,8 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { notFound } from "next/navigation"
 import { sections } from "@/lib/assessment-data"
 import { getTier, getTierDescription } from "@/lib/scoring"
-import type { Tier, SectionScores, Answers } from "@/lib/scoring"
+import type { Tier } from "@/lib/scoring"
+import type { SectionTotals, Answers } from "@/types/assessment"
 import {
   generateExecutiveSummary,
   generateSectionInterpretation,
@@ -21,7 +22,7 @@ interface AssessmentData {
   contact_name: string
   email: string
   answers: Answers & { financial?: FinancialInputs }
-  section_scores: SectionScores
+  section_scores: SectionTotals
   total_score: number
   tier: Tier
   completed_at: string
@@ -49,12 +50,12 @@ export default async function ResultsPage({
   const tier = (assessment.tier as Tier) || getTier(assessment.total_score || 0)
   const tierDescription = getTierDescription(tier)
 
-  // Generate mock AI content
+  // Generate mock AI content (section_scores is SectionTotals, compatible with Record<string, number>)
   const executiveSummary = generateExecutiveSummary(
     assessment.company_name,
     assessment.total_score,
     tier,
-    assessment.section_scores
+    assessment.section_scores as unknown as Record<string, number>
   )
 
   const sectionInterpretations: Record<string, string> = {}
@@ -66,11 +67,12 @@ export default async function ResultsPage({
     )
   }
 
-  const competitiveLandscape = generateCompetitiveLandscape(
+  const competitiveLandscapeText = generateCompetitiveLandscape(
     (assessment.answers as Record<string, unknown>)?.product_category as string ||
       "Technology",
     assessment.company_name
   )
+  const competitiveLandscape = { summary: competitiveLandscapeText, competitors: [] }
 
   // Financial projections
   const financialInputs: FinancialInputs = assessment.answers?.financial || {

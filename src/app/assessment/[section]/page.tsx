@@ -7,7 +7,7 @@ import { SectionStepper } from "@/components/section-stepper"
 import { AnswerCard } from "@/components/answer-card"
 import { Button } from "@/components/ui/button"
 import { sections } from "@/lib/assessment-data"
-import type { Answers } from "@/lib/scoring"
+import type { Answers } from "@/types/assessment"
 import { ChevronLeft, ChevronRight, Check } from "lucide-react"
 import { cn } from "@/lib/utils"
 
