@@ -48,11 +48,13 @@ export function LeadCaptureForm() {
     const formData = new FormData(e.currentTarget)
 
     const payload = {
-      contact_name: `${formData.get("first_name")} ${formData.get("last_name")}`,
+      contact_name: `${formData.get("first_name")} ${formData.get("last_name")}`.trim(),
       email: formData.get("email"),
       phone: formData.get("phone") || null,
       company_name: formData.get("company_name"),
       title: formData.get("title") || null,
+      company_website: formData.get("company_website") || null,
+      product_category: formData.get("product_category") || null,
       current_revenue: null,
     }
 
