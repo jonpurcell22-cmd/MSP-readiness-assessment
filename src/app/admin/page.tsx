@@ -403,7 +403,7 @@ export default function AdminPage() {
                                 asChild
                               >
                                 <a
-                                  href={`/results/${a.id}`}
+                                  href={`/assessment/results/${a.id}`}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                 >
@@ -525,7 +525,7 @@ export default function AdminPage() {
                     asChild
                   >
                     <a
-                      href={`/results/${selectedAssessment.id}`}
+                      href={`/assessment/results/${selectedAssessment.id}`}
                       target="_blank"
                       rel="noopener noreferrer"
                     >

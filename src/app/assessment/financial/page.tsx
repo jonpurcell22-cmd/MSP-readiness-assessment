@@ -73,7 +73,7 @@ export default function FinancialContextPage() {
 
       if (!updateRes.ok) throw new Error("Failed to save results")
 
-      router.push(`/results/${assessmentId}`)
+      router.push(`/assessment/results/${assessmentId}`)
     } catch {
       setError("Something went wrong. Please try again.")
       setSaving(false)
