@@ -1,28 +1,22 @@
-"use client";
+"use client"
 
-import { useState, useEffect, useCallback } from "react";
-import { Header } from "@/components/header";
-import { Footer } from "@/components/footer";
-import { TierBadge } from "@/components/tier-badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { useState, useEffect, useCallback } from "react"
+import { Header } from "@/components/header"
+import { Footer } from "@/components/footer"
+import { TierBadge } from "@/components/tier-badge"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { ScoreBar } from "@/components/score-bar";
-import { sections } from "@/lib/assessment-data";
-import { toPercentageScore, TIER_LABELS } from "@/lib/scoring";
-import type { ReadinessTier } from "@/types/assessment";
+} from "@/components/ui/dialog"
+import { ScoreBar } from "@/components/score-bar"
+import { sections } from "@/lib/assessment-data"
+import { toPercentageScore } from "@/lib/scoring"
 import {
   Lock,
   Download,
@@ -32,352 +26,160 @@ import {
   Calendar,
   ExternalLink,
   ArrowUpDown,
-  Trash2,
-} from "lucide-react";
+} from "lucide-react"
 
-/** API row shape (Supabase assessments table). */
-interface AssessmentRow {
-  id: string;
-  created_at: string;
-  full_name: string;
-  email: string;
-  phone: string | null;
-  title: string | null;
-  company_name: string;
-  company_website: string | null;
-  product_category: string;
-  section_1_total: number | null;
-  section_2_total: number | null;
-  section_3_total: number | null;
-  section_4_total: number | null;
-  section_5_total: number | null;
-  section_6_total: number | null;
-  section_7_total: number | null;
-  section_7_skipped?: boolean;
-  overall_score: number | null;
-  readiness_tier: string | null;
-}
-
-function buildSectionScores(row: AssessmentRow): Record<string, number> {
-  return {
-    section1: row.section_1_total ?? 0,
-    section2: row.section_2_total ?? 0,
-    section3: row.section_3_total ?? 0,
-    section4: row.section_4_total ?? 0,
-    section5: row.section_5_total ?? 0,
-    section6: row.section_6_total ?? 0,
-    section7: row.section_7_skipped ? 0 : (row.section_7_total ?? 0),
-  };
-}
-
-function exportCSV(rows: AssessmentRow[]) {
-  const headers = [
-    "Date",
-    "Company",
-    "Contact",
-    "Title",
-    "Email",
-    "Category",
-    "Score",
-    "Tier",
-  ];
-  const lines = [
-    headers.join(","),
-    ...rows.map((r) =>
-      [
-        new Date(r.created_at).toISOString().split("T")[0],
-        `"${(r.company_name ?? "").replace(/"/g, '""')}"`,
-        `"${(r.full_name ?? "").replace(/"/g, '""')}"`,
-        `"${(r.title ?? "").replace(/"/g, '""')}"`,
-        r.email ?? "",
-        `"${(r.product_category ?? "").replace(/"/g, '""')}"`,
-        r.overall_score ?? "",
-        TIER_LABELS[(r.readiness_tier as ReadinessTier) ?? "emerging"] ??
-          r.readiness_tier ??
-          "",
-      ].join(",")
-    ),
-  ];
-  const blob = new Blob([lines.join("\n")], {
-    type: "text/csv;charset=utf-8;",
-  });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `assessments-${new Date().toISOString().split("T")[0]}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
+interface Assessment {
+  id: string
+  company_name: string
+  contact_name: string
+  title: string | null
+  email: string
+  phone: string | null
+  total_score: number | null
+  tier: string | null
+  section_scores: Record<string, number> | null
+  answers: Record<string, unknown> | null
+  completed_at: string | null
+  created_at: string
 }
 
 export default function AdminPage() {
-  const [authFailed, setAuthFailed] = useState(false);
-  const [password, setPassword] = useState("");
-  const [loginError, setLoginError] = useState("");
-  const [loggingIn, setLoggingIn] = useState(false);
+  const [authToken, setAuthToken] = useState<string | null>(null)
+  const [password, setPassword] = useState("")
+  const [loginError, setLoginError] = useState("")
+  const [loggingIn, setLoggingIn] = useState(false)
 
-  const [assessments, setAssessments] = useState<AssessmentRow[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [assessments, setAssessments] = useState<Assessment[]>([])
+  const [loading, setLoading] = useState(false)
   const [selectedAssessment, setSelectedAssessment] =
-    useState<AssessmentRow | null>(null);
-  const [sortField, setSortField] = useState<string>("created_at");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
-  const [pdfLoadingId, setPdfLoadingId] = useState<string | null>(null);
-  const [pdfError, setPdfError] = useState<string | null>(null);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [deleteConfirm, setDeleteConfirm] = useState<
-    { type: "single"; id: string; companyName: string } | { type: "bulk"; count: number } | null
-  >(null);
-  const [deleting, setDeleting] = useState(false);
+    useState<Assessment | null>(null)
+  const [sortField, setSortField] = useState<string>("created_at")
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc")
 
-  const authenticated = !authFailed;
+  const authenticated = !!authToken
 
-  const fetchAssessments = useCallback(async () => {
-    setLoading(true);
-    setAuthFailed(false);
+  const fetchAssessments = useCallback(async (token: string) => {
+    setLoading(true)
     try {
       const res = await fetch("/api/admin/assessments", {
-        credentials: "include",
-      });
+        headers: { Authorization: `Bearer ${token}` },
+      })
       if (res.status === 401) {
-        setAuthFailed(true);
-        setAssessments([]);
-        return;
+        setAuthToken(null)
+        return
       }
       if (res.ok) {
-        const data = await res.json();
-        setAssessments(Array.isArray(data) ? data : []);
+        const data = await res.json()
+        setAssessments(data)
       }
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  }, []);
+  }, [])
 
   useEffect(() => {
-    fetchAssessments();
-  }, [fetchAssessments]);
+    if (authToken) {
+      fetchAssessments(authToken)
+    }
+  }, [authToken, fetchAssessments])
 
   async function handleLogin(e: React.FormEvent) {
-    e.preventDefault();
-    setLoggingIn(true);
-    setLoginError("");
+    e.preventDefault()
+    setLoggingIn(true)
+    setLoginError("")
 
     try {
       const res = await fetch("/api/admin/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password }),
-        credentials: "include",
-      });
+      })
 
-      const data = await res.json().catch(() => ({}));
+      const data = await res.json()
 
-      if (res.ok) {
-        setPassword("");
-        fetchAssessments();
+      if (res.ok && data.token) {
+        setAuthToken(data.token)
       } else {
-        setLoginError(data.error ?? "Invalid password");
+        setLoginError(data.error || "Invalid password")
       }
     } catch {
-      setLoginError("Login failed");
+      setLoginError("Login failed")
     } finally {
-      setLoggingIn(false);
+      setLoggingIn(false)
     }
-  }
-
-  async function handleLogout() {
-    await fetch("/api/admin/logout", { method: "POST", credentials: "include" });
-    setAuthFailed(true);
-    setAssessments([]);
-    setSelectedAssessment(null);
   }
 
   function handleSort(field: string) {
     if (sortField === field) {
-      setSortDir(sortDir === "asc" ? "desc" : "asc");
+      setSortDir(sortDir === "asc" ? "desc" : "asc")
     } else {
-      setSortField(field);
-      setSortDir("desc");
+      setSortField(field)
+      setSortDir("desc")
     }
   }
 
   const sortedAssessments = [...assessments].sort((a, b) => {
-    let aVal: string | number | null = null;
-    let bVal: string | number | null = null;
+    let aVal: string | number | null = null
+    let bVal: string | number | null = null
 
     switch (sortField) {
       case "created_at":
-        aVal = a.created_at;
-        bVal = b.created_at;
-        break;
+        aVal = a.created_at
+        bVal = b.created_at
+        break
       case "company_name":
-        aVal = a.company_name?.toLowerCase() ?? "";
-        bVal = b.company_name?.toLowerCase() ?? "";
-        break;
-      case "contact_name":
-        aVal = a.full_name?.toLowerCase() ?? "";
-        bVal = b.full_name?.toLowerCase() ?? "";
-        break;
-      case "title":
-        aVal = a.title ?? "";
-        bVal = b.title ?? "";
-        break;
-      case "email":
-        aVal = a.email ?? "";
-        bVal = b.email ?? "";
-        break;
-      case "product_category":
-        aVal = a.product_category?.toLowerCase() ?? "";
-        bVal = b.product_category?.toLowerCase() ?? "";
-        break;
+        aVal = a.company_name?.toLowerCase() || ""
+        bVal = b.company_name?.toLowerCase() || ""
+        break
       case "total_score":
-        aVal = a.overall_score ?? 0;
-        bVal = b.overall_score ?? 0;
-        break;
+        aVal = a.total_score || 0
+        bVal = b.total_score || 0
+        break
       case "tier":
-        aVal = a.readiness_tier ?? "";
-        bVal = b.readiness_tier ?? "";
-        break;
+        aVal = a.tier || ""
+        bVal = b.tier || ""
+        break
       default:
-        return 0;
+        return 0
     }
 
-    if (aVal === null || bVal === null) return 0;
-    if (aVal < bVal) return sortDir === "asc" ? -1 : 1;
-    if (aVal > bVal) return sortDir === "asc" ? 1 : -1;
-    return 0;
-  });
+    if (aVal === null || bVal === null) return 0
+    if (aVal < bVal) return sortDir === "asc" ? -1 : 1
+    if (aVal > bVal) return sortDir === "asc" ? 1 : -1
+    return 0
+  })
 
-  const completedAssessments = assessments.filter((a) => a.readiness_tier);
+  // Stats
+  const completedAssessments = assessments.filter((a) => a.completed_at)
   const avgScore =
     completedAssessments.length > 0
       ? Math.round(
           completedAssessments.reduce(
-            (s, a) => s + toPercentageScore(a.overall_score ?? 0),
+            (s, a) => s + toPercentageScore(a.total_score || 0),
             0
           ) / completedAssessments.length
         )
-      : 0;
+      : 0
 
-  const tierCounts: Record<string, number> = {};
+  const tierCounts: Record<string, number> = {}
   completedAssessments.forEach((a) => {
-    if (a.readiness_tier)
-      tierCounts[a.readiness_tier] = (tierCounts[a.readiness_tier] ?? 0) + 1;
-  });
+    if (a.tier) tierCounts[a.tier] = (tierCounts[a.tier] || 0) + 1
+  })
   const mostCommonTier =
-    Object.entries(tierCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "N/A";
-  const mostCommonTierLabel =
-    TIER_LABELS[mostCommonTier as ReadinessTier] ?? mostCommonTier;
+    Object.entries(tierCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || "N/A"
 
-  const thisWeek = new Date();
-  thisWeek.setDate(thisWeek.getDate() - 7);
+  const thisWeek = new Date()
+  thisWeek.setDate(thisWeek.getDate() - 7)
   const weekCount = assessments.filter(
     (a) => new Date(a.created_at) >= thisWeek
-  ).length;
+  ).length
 
-  async function handlePdf(id: string, action: "view" | "download") {
-    setPdfError(null);
-    setPdfLoadingId(id);
-    try {
-      const res = await fetch(`/api/admin/assessments/${id}/pdf`, {
-        credentials: "include",
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        setPdfError((body as { error?: string })?.error ?? res.statusText);
-        return;
-      }
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      if (action === "view") {
-        window.open(url, "_blank", "noopener,noreferrer");
-        setTimeout(() => URL.revokeObjectURL(url), 5000);
-      } else {
-        const a = document.createElement("a");
-        a.href = url;
-        a.download =
-          res.headers.get("Content-Disposition")?.match(/filename="?([^";]+)"?/)?.[1] ??
-          `assessment-${id}.pdf`;
-        a.click();
-        URL.revokeObjectURL(url);
-      }
-    } catch (err) {
-      setPdfError(err instanceof Error ? err.message : "Failed to load PDF");
-    } finally {
-      setPdfLoadingId(null);
-    }
-  }
-
-  function toggleSelect(id: string) {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
-
-  function toggleSelectAll() {
-    if (selectedIds.size === sortedAssessments.length) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(sortedAssessments.map((a) => a.id)));
-    }
-  }
-
-  async function handleDeleteSingle(id: string) {
-    setDeleting(true);
-    try {
-      const res = await fetch(`/api/admin/assessments/${id}`, {
-        method: "DELETE",
-        credentials: "include",
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        setPdfError((data as { error?: string })?.error ?? "Delete failed");
-        return;
-      }
-      setDeleteConfirm(null);
-      setSelectedIds((prev) => {
-        const next = new Set(prev);
-        next.delete(id);
-        return next;
-      });
-      await fetchAssessments();
-      if (selectedAssessment?.id === id) setSelectedAssessment(null);
-    } finally {
-      setDeleting(false);
-    }
-  }
-
-  async function handleDeleteBulk(ids: string[]) {
-    setDeleting(true);
-    try {
-      const res = await fetch("/api/admin/assessments", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids }),
-        credentials: "include",
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        setPdfError((data as { error?: string })?.error ?? "Bulk delete failed");
-        return;
-      }
-      setDeleteConfirm(null);
-      setSelectedIds(new Set());
-      await fetchAssessments();
-      if (selectedAssessment && ids.includes(selectedAssessment.id))
-        setSelectedAssessment(null);
-    } finally {
-      setDeleting(false);
-    }
-  }
-
+  // Password gate
   if (!authenticated) {
     return (
       <div className="flex min-h-screen flex-col bg-background">
         <Header />
-        <main className="flex flex-1 items-center justify-center px-6 py-8">
+        <main className="flex flex-1 items-center justify-center px-6">
           <Card className="w-full max-w-[400px] border-border">
             <CardHeader className="text-center">
               <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-[var(--brand-subtle)]">
@@ -406,7 +208,7 @@ export default function AdminPage() {
                 <Button
                   type="submit"
                   disabled={loggingIn}
-                  className="bg-[var(--brand-green)] font-semibold text-[var(--brand-dark)] hover:bg-[var(--brand-green)]/90"
+                  className="bg-[var(--brand-green)] text-[var(--brand-dark)] hover:bg-[var(--brand-green)]/90 font-semibold"
                 >
                   {loggingIn ? "Logging in..." : "Log In"}
                 </Button>
@@ -416,42 +218,39 @@ export default function AdminPage() {
         </main>
         <Footer />
       </div>
-    );
+    )
   }
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <Header
         rightContent={
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => exportCSV(assessments)}
-            >
-              <Download className="mr-1 h-4 w-4" />
-              Export CSV
-            </Button>
-            <Button variant="ghost" size="sm" onClick={handleLogout}>
-              Sign out
-            </Button>
-          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={async () => {
+              if (!authToken) return
+              const res = await fetch("/api/admin/export", {
+                headers: { Authorization: `Bearer ${authToken}` },
+              })
+              if (res.ok) {
+                const blob = await res.blob()
+                const url = URL.createObjectURL(blob)
+                const a = document.createElement("a")
+                a.href = url
+                a.download = `assessments-${new Date().toISOString().split("T")[0]}.csv`
+                a.click()
+                URL.revokeObjectURL(url)
+              }
+            }}
+          >
+            <Download className="mr-1 h-4 w-4" />
+            Export CSV
+          </Button>
         }
       />
       <main className="mx-auto w-full max-w-[1100px] flex-1 px-6 py-8">
-        {pdfError && (
-          <div className="mb-4 flex items-center justify-between rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-            <span>{pdfError}</span>
-            <button
-              type="button"
-              onClick={() => setPdfError(null)}
-              className="font-medium underline hover:no-underline"
-            >
-              Dismiss
-            </button>
-          </div>
-        )}
-
+        {/* Stats Cards */}
         <div className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
           <Card className="border-border">
             <CardContent className="flex flex-col gap-1 py-4">
@@ -482,7 +281,7 @@ export default function AdminPage() {
                 <span className="text-xs">Most Common Tier</span>
               </div>
               <p className="text-lg font-bold text-[var(--brand-dark)]">
-                {mostCommonTierLabel}
+                {mostCommonTier}
               </p>
             </CardContent>
           </Card>
@@ -499,25 +298,12 @@ export default function AdminPage() {
           </Card>
         </div>
 
+        {/* Data Table */}
         <Card className="border-border">
-          <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-4">
+          <CardHeader>
             <CardTitle className="text-lg text-[var(--brand-dark)]">
               All Assessments
             </CardTitle>
-            {selectedIds.size > 0 && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 hover:border-red-300"
-                disabled={deleting}
-                onClick={() =>
-                  setDeleteConfirm({ type: "bulk", count: selectedIds.size })
-                }
-              >
-                <Trash2 className="mr-1 h-4 w-4" />
-                Delete Selected ({selectedIds.size})
-              </Button>
-            )}
           </CardHeader>
           <CardContent>
             {loading ? (
@@ -534,18 +320,6 @@ export default function AdminPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-border">
-                      <th className="w-10 pb-3 pr-2">
-                        <input
-                          type="checkbox"
-                          checked={
-                            sortedAssessments.length > 0 &&
-                            selectedIds.size === sortedAssessments.length
-                          }
-                          onChange={toggleSelectAll}
-                          className="h-4 w-4 rounded border-gray-300 text-[var(--brand-green)] focus:ring-[var(--brand-green)]"
-                          aria-label="Select all rows"
-                        />
-                      </th>
                       {[
                         { key: "created_at", label: "Date" },
                         { key: "company_name", label: "Company" },
@@ -577,18 +351,9 @@ export default function AdminPage() {
                       <tr
                         key={a.id}
                         className={`border-b border-border last:border-0 ${
-                          i % 2 === 0 ? "bg-muted/30" : ""
+                          i % 2 === 0 ? "bg-[#F4F4F4]" : ""
                         }`}
                       >
-                        <td className="w-10 py-3 pr-2 align-middle">
-                          <input
-                            type="checkbox"
-                            checked={selectedIds.has(a.id)}
-                            onChange={() => toggleSelect(a.id)}
-                            className="h-4 w-4 rounded border-gray-300 text-[var(--brand-green)] focus:ring-[var(--brand-green)]"
-                            aria-label={`Select ${a.company_name}`}
-                          />
-                        </td>
                         <td className="py-3 pr-4 text-muted-foreground">
                           {new Date(a.created_at).toLocaleDateString()}
                         </td>
@@ -596,38 +361,31 @@ export default function AdminPage() {
                           {a.company_name}
                         </td>
                         <td className="py-3 pr-4 text-foreground">
-                          {a.full_name}
+                          {a.contact_name}
                         </td>
                         <td className="py-3 pr-4 text-muted-foreground">
-                          {a.title ?? "—"}
+                          {a.title || "---"}
                         </td>
                         <td className="py-3 pr-4 text-muted-foreground">
                           {a.email}
                         </td>
                         <td className="py-3 pr-4 text-muted-foreground">
-                          {a.product_category ?? "—"}
+                          {(a.answers as Record<string, unknown>)
+                            ?.product_category as string || "---"}
                         </td>
                         <td className="py-3 pr-4 font-semibold text-foreground">
-                          {a.overall_score != null
-                            ? `${toPercentageScore(a.overall_score)}/100`
-                            : "—"}
+                          {a.total_score != null
+                            ? `${toPercentageScore(a.total_score)}/100`
+                            : "---"}
                         </td>
-                        <td className="py-3 pr-4 align-middle">
-                          <div className="flex min-h-[2rem] items-center justify-center">
-                            {a.readiness_tier ? (
-                              <TierBadge
-                                tier={
-                                  TIER_LABELS[
-                                    a.readiness_tier as ReadinessTier
-                                  ] ?? a.readiness_tier
-                                }
-                              />
-                            ) : (
-                              <span className="text-xs text-muted-foreground">
-                                Incomplete
-                              </span>
-                            )}
-                          </div>
+                        <td className="py-3 pr-4">
+                          {a.tier ? (
+                            <TierBadge tier={a.tier} />
+                          ) : (
+                            <span className="text-xs text-muted-foreground">
+                              Incomplete
+                            </span>
+                          )}
                         </td>
                         <td className="py-3">
                           <div className="flex items-center gap-2">
@@ -638,10 +396,14 @@ export default function AdminPage() {
                             >
                               View
                             </Button>
-                            {a.readiness_tier && (
-                              <Button variant="ghost" size="sm" asChild>
+                            {a.completed_at && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                asChild
+                              >
                                 <a
-                                  href={`/assessment/results/${a.id}`}
+                                  href={`/results/${a.id}`}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                 >
@@ -649,20 +411,6 @@ export default function AdminPage() {
                                 </a>
                               </Button>
                             )}
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setDeleteConfirm({
-                                  type: "single",
-                                  id: a.id,
-                                  companyName: a.company_name ?? "this company",
-                                })
-                              }
-                              className="rounded p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-200"
-                              aria-label={`Delete assessment for ${a.company_name}`}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
                           </div>
                         </td>
                       </tr>
@@ -670,7 +418,7 @@ export default function AdminPage() {
                     {sortedAssessments.length === 0 && (
                       <tr>
                         <td
-                          colSpan={10}
+                          colSpan={9}
                           className="py-8 text-center text-muted-foreground"
                         >
                           No assessments yet.
@@ -686,51 +434,7 @@ export default function AdminPage() {
       </main>
       <Footer />
 
-      <Dialog
-        open={!!deleteConfirm}
-        onOpenChange={() => !deleting && setDeleteConfirm(null)}
-      >
-        <DialogContent className="max-w-[400px]">
-          <DialogHeader>
-            <DialogTitle className="text-[var(--brand-dark)]">
-              Delete assessment{deleteConfirm?.type === "bulk" ? "s" : ""}?
-            </DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            {deleteConfirm?.type === "single"
-              ? `Are you sure you want to delete this assessment for ${deleteConfirm.companyName}? This cannot be undone.`
-              : deleteConfirm?.type === "bulk"
-                ? `Are you sure you want to delete ${deleteConfirm.count} assessment(s)? This cannot be undone.`
-                : ""}
-          </p>
-          <div className="flex justify-end gap-2 pt-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setDeleteConfirm(null)}
-              disabled={deleting}
-            >
-              Cancel
-            </Button>
-            <Button
-              size="sm"
-              className="bg-red-600 text-white hover:bg-red-700"
-              disabled={deleting}
-              onClick={() => {
-                if (!deleteConfirm) return;
-                if (deleteConfirm.type === "single") {
-                  handleDeleteSingle(deleteConfirm.id);
-                } else {
-                  handleDeleteBulk(Array.from(selectedIds));
-                }
-              }}
-            >
-              {deleting ? "Deleting…" : deleteConfirm?.type === "bulk" ? "Delete Selected" : "Delete"}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
+      {/* Detail Dialog */}
       <Dialog
         open={!!selectedAssessment}
         onOpenChange={() => setSelectedAssessment(null)}
@@ -744,17 +448,18 @@ export default function AdminPage() {
                 </DialogTitle>
               </DialogHeader>
               <div className="flex flex-col gap-6">
+                {/* Contact Info */}
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <p className="text-xs text-muted-foreground">Contact</p>
                     <p className="font-medium text-foreground">
-                      {selectedAssessment.full_name}
+                      {selectedAssessment.contact_name}
                     </p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Title</p>
                     <p className="font-medium text-foreground">
-                      {selectedAssessment.title ?? "N/A"}
+                      {selectedAssessment.title || "N/A"}
                     </p>
                   </div>
                   <div>
@@ -766,7 +471,7 @@ export default function AdminPage() {
                   <div>
                     <p className="text-xs text-muted-foreground">Phone</p>
                     <p className="font-medium text-foreground">
-                      {selectedAssessment.phone ?? "N/A"}
+                      {selectedAssessment.phone || "N/A"}
                     </p>
                   </div>
                   <div>
@@ -779,83 +484,61 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                {selectedAssessment.overall_score !== null && (
+                {/* Score Summary */}
+                {selectedAssessment.total_score !== null && (
                   <div className="flex items-center gap-4">
                     <div className="text-3xl font-bold text-[var(--brand-dark)]">
-                      {toPercentageScore(selectedAssessment.overall_score)}/100
+                      {toPercentageScore(selectedAssessment.total_score ?? 0)}/100
                     </div>
-                    {selectedAssessment.readiness_tier && (
-                      <TierBadge
-                        tier={
-                          TIER_LABELS[
-                            selectedAssessment.readiness_tier as ReadinessTier
-                          ] ?? selectedAssessment.readiness_tier
-                        }
-                      />
+                    {selectedAssessment.tier && (
+                      <TierBadge tier={selectedAssessment.tier} />
                     )}
                   </div>
                 )}
 
-                <div className="flex flex-col gap-3">
-                  <h3 className="text-sm font-semibold text-[var(--brand-dark)]">
-                    Section Scores
-                  </h3>
-                  {sections.map((section) => (
-                    <div key={section.id} className="flex flex-col gap-1">
-                      <p className="text-xs text-muted-foreground">
-                        {section.title}
-                      </p>
-                      <ScoreBar
-                        score={buildSectionScores(selectedAssessment)[section.id] ?? 0}
-                        max={25}
-                      />
-                    </div>
-                  ))}
-                </div>
+                {/* Section Scores */}
+                {selectedAssessment.section_scores && (
+                  <div className="flex flex-col gap-3">
+                    <h3 className="text-sm font-semibold text-[var(--brand-dark)]">
+                      Section Scores
+                    </h3>
+                    {sections.map((section) => (
+                      <div key={section.id} className="flex flex-col gap-1">
+                        <p className="text-xs text-muted-foreground">
+                          {section.title}
+                        </p>
+                        <ScoreBar
+                          score={
+                            selectedAssessment.section_scores?.[section.id] || 0
+                          }
+                          max={25}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
 
-                <div className="flex flex-wrap items-center gap-2">
+                {/* View Results Link */}
+                {selectedAssessment.completed_at && (
                   <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handlePdf(selectedAssessment.id, "view")}
-                    disabled={pdfLoadingId === selectedAssessment.id}
+                    className="bg-[var(--brand-green)] text-[var(--brand-dark)] hover:bg-[var(--brand-green)]/90 font-semibold"
+                    asChild
                   >
-                    {pdfLoadingId === selectedAssessment.id
-                      ? "Loading…"
-                      : "View PDF"}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handlePdf(selectedAssessment.id, "download")}
-                    disabled={pdfLoadingId === selectedAssessment.id}
-                  >
-                    Download PDF
-                  </Button>
-                  {selectedAssessment.readiness_tier && (
-                    <Button
-                      className="bg-[var(--brand-green)] font-semibold text-[var(--brand-dark)] hover:bg-[var(--brand-green)]/90"
-                      size="sm"
-                      asChild
+                    <a
+                      href={`/results/${selectedAssessment.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
                     >
-                      <a
-                        href={`/assessment/results/${selectedAssessment.id}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <ExternalLink className="mr-2 h-4 w-4" />
-                        View Full Results
-                      </a>
-                    </Button>
-                  )}
-                </div>
+                      <ExternalLink className="mr-2 h-4 w-4" />
+                      View Full Results
+                    </a>
+                  </Button>
+                )}
               </div>
             </>
           )}
         </DialogContent>
       </Dialog>
     </div>
-  );
+  )
 }

@@ -1,32 +1,30 @@
-import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
-import "./globals.css";
+import type { Metadata, Viewport } from 'next'
+import { Inter } from 'next/font/google'
+import { Analytics } from '@vercel/analytics/next'
+import './globals.css'
 
-const inter = Inter({ subsets: ["latin"] });
+const _inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "MSP Channel Readiness Assessment | Untapped Channel Strategy",
-  description:
-    "Evaluate your readiness to build a profitable MSP channel program. Get a personalized scorecard, competitive analysis, and financial projections.",
-  icons: {
-    icon: "/images/Untapped%20Channel%20Logo%20Symbol%20Transparent%20bg.svg",
-  },
-};
+  title: 'MSP Channel Readiness Assessment | Untapped Channel Strategy',
+  description: 'Evaluate your readiness to build a profitable MSP channel program. Get a personalized scorecard, competitive analysis, and financial projections.',
+}
 
 export const viewport: Viewport = {
-  themeColor: "#4cf37b",
-};
+  themeColor: '#4cf37b',
+}
 
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode;
+  children: React.ReactNode
 }>) {
   return (
     <html lang="en">
-      <body className={`${inter.className} antialiased min-h-screen bg-background text-foreground`}>
+      <body className="font-sans antialiased">
         {children}
+        <Analytics />
       </body>
     </html>
-  );
+  )
 }

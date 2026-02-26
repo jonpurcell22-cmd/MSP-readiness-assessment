@@ -1,5 +1,5 @@
 import { AssessmentLayout } from "@/components/assessment-layout"
-import { LeadCaptureForm } from "@/components/LeadCaptureForm"
+import { LeadCaptureForm } from "@/components/lead-capture-form"
 import { Card, CardContent } from "@/components/ui/card"
 import { Clock, BarChart3, Target } from "lucide-react"
 

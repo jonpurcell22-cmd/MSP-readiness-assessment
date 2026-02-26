@@ -1,19 +1,18 @@
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils"
 
 const tierColors: Record<string, string> = {
   "MSP Premature": "bg-[#EF4444] text-white",
-  "MSP Emerging": "bg-[#333333] text-white",
+  "MSP Emerging": "bg-[#F59E0B] text-white",
   "MSP Capable": "bg-[#4cf37b] text-white",
   "MSP Ready": "bg-[#4cf37b] text-white",
-  "MSP Program Ready": "bg-[#4cf37b] text-white",
-};
+}
 
 export function TierBadge({
   tier,
   className,
 }: {
-  tier: string;
-  className?: string;
+  tier: string
+  className?: string
 }) {
   return (
     <span
@@ -25,5 +24,5 @@ export function TierBadge({
     >
       {tier}
     </span>
-  );
+  )
 }

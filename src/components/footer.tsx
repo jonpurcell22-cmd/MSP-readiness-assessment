@@ -5,5 +5,5 @@ export function Footer() {
         Untapped Channel Strategy | untappedchannelstrategy.com
       </p>
     </footer>
-  );
+  )
 }

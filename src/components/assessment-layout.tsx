@@ -1,13 +1,12 @@
-import type { ReactNode } from "react";
-import { Header } from "@/components/header";
-import { Footer } from "@/components/footer";
+import { Header } from "./header"
+import { Footer } from "./footer"
 
 export function AssessmentLayout({
   children,
   rightContent,
 }: {
-  children: ReactNode;
-  rightContent?: ReactNode;
+  children: React.ReactNode
+  rightContent?: React.ReactNode
 }) {
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -17,5 +16,5 @@ export function AssessmentLayout({
       </main>
       <Footer />
     </div>
-  );
+  )
 }

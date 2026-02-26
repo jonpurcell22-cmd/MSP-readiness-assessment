@@ -1,43 +1,63 @@
-"use client";
+"use client"
 
-import { cn } from "@/lib/utils";
-import { sections } from "@/lib/assessment-data";
+import { cn } from "@/lib/utils"
+import { Check } from "lucide-react"
 
-/** Short labels for the stepper (fit in a compact row). */
-const STEPPER_LABELS: Record<number, string> = {
-  1: "Product",
-  2: "Pricing",
-  3: "Org & GTM",
-  4: "Ecosystem",
-  5: "Enablement",
-  6: "Competitive",
-  7: "Channel Health",
-};
+const sectionNames = [
+  "Pricing & Economics",
+  "Product Architecture",
+  "Organization & GTM",
+  "Partner Ecosystem",
+  "Enablement",
+  "Competitive Landscape",
+  "Channel Health",
+]
 
 export function SectionStepper({ currentSection }: { currentSection: number }) {
   return (
-    <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3">
-      {sections.map((section, i) => {
-        const num = i + 1;
-        const label = STEPPER_LABELS[num] ?? section.title;
-        const isCurrent = num === currentSection;
+    <div className="flex items-center gap-0 overflow-x-auto pb-1">
+      {sectionNames.map((name, i) => {
+        const stepNum = i + 1
+        const isCompleted = stepNum < currentSection
+        const isCurrent = stepNum === currentSection
+
         return (
-          <div
-            key={section.id}
-            className={cn(
-              "rounded-full px-3 py-1.5 text-xs font-medium transition-colors sm:px-4 sm:py-2 sm:text-sm",
-              isCurrent
-                ? "bg-[#4cf37b] text-[#333333]"
-                : "bg-[#E5E5E5] text-[#333333]/70"
+          <div key={name} className="flex items-center">
+            <div className="flex flex-col items-center gap-1.5">
+              <div
+                className={cn(
+                  "flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition-all duration-300",
+                  isCompleted && "bg-[var(--brand-green)] text-[var(--brand-dark)]",
+                  isCurrent && "bg-[var(--brand-dark)] text-white ring-2 ring-[var(--brand-green)] ring-offset-2",
+                  !isCompleted && !isCurrent && "bg-muted text-muted-foreground"
+                )}
+              >
+                {isCompleted ? <Check className="h-3.5 w-3.5" strokeWidth={3} /> : stepNum}
+              </div>
+              <span
+                className={cn(
+                  "whitespace-nowrap text-[10px] font-semibold tracking-editorial transition-colors",
+                  isCurrent
+                    ? "text-[var(--brand-dark)]"
+                    : isCompleted
+                      ? "text-[var(--brand-dark)]/70"
+                      : "text-muted-foreground"
+                )}
+              >
+                {name}
+              </span>
+            </div>
+            {i < sectionNames.length - 1 && (
+              <div
+                className={cn(
+                  "mx-1 mt-[-18px] h-[2px] w-5 transition-colors duration-300 sm:w-8",
+                  isCompleted ? "bg-[var(--brand-green)]" : "bg-muted"
+                )}
+              />
             )}
-            aria-current={isCurrent ? "step" : undefined}
-            title={section.title}
-          >
-            <span className="font-semibold">{num}</span>
-            <span className="ml-1.5 hidden sm:inline">{label}</span>
           </div>
-        );
+        )
       })}
     </div>
-  );
+  )
 }

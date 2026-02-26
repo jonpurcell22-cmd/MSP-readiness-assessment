@@ -1,22 +1,15 @@
-"use client";
+"use client"
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react"
 
 const tierColors: Record<string, string> = {
   "MSP Premature": "#EF4444",
   "MSP Emerging": "#F59E0B",
   "MSP Capable": "#4cf37b",
   "MSP Ready": "#4cf37b",
-  "MSP Program Ready": "#4cf37b",
-};
+}
 
-const confettiColors = [
-  "#4cf37b",
-  "#22c55e",
-  "#3b82f6",
-  "#f59e0b",
-  "#333333",
-];
+const confettiColors = ["#4cf37b", "#22c55e", "#3b82f6", "#f59e0b", "#333333"]
 
 function ConfettiBurst() {
   const particles = Array.from({ length: 24 }, (_, i) => ({
@@ -26,7 +19,7 @@ function ConfettiBurst() {
     duration: 0.8 + Math.random() * 0.6,
     color: confettiColors[Math.floor(Math.random() * confettiColors.length)],
     size: 4 + Math.random() * 4,
-  }));
+  }))
 
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -45,7 +38,7 @@ function ConfettiBurst() {
         />
       ))}
     </div>
-  );
+  )
 }
 
 export function ScoreGauge({
@@ -53,41 +46,42 @@ export function ScoreGauge({
   max,
   tier,
 }: {
-  score: number;
-  max: number;
-  tier: string;
+  score: number
+  max: number
+  tier: string
 }) {
-  const [animatedScore, setAnimatedScore] = useState(0);
-  const [showConfetti, setShowConfetti] = useState(false);
-  const hasAnimated = useRef(false);
-  const color = tierColors[tier] || "#4cf37b";
-  const percentage = (animatedScore / max) * 100;
-  const circumference = 2 * Math.PI * 80;
-  const strokeDashoffset = circumference - (percentage / 100) * circumference;
+  const [animatedScore, setAnimatedScore] = useState(0)
+  const [showConfetti, setShowConfetti] = useState(false)
+  const hasAnimated = useRef(false)
+  const color = tierColors[tier] || "#4cf37b"
+  const percentage = (animatedScore / max) * 100
+  const circumference = 2 * Math.PI * 80
+  const strokeDashoffset = circumference - (percentage / 100) * circumference
 
   useEffect(() => {
-    if (hasAnimated.current) return;
-    hasAnimated.current = true;
+    if (hasAnimated.current) return
+    hasAnimated.current = true
 
-    const duration = 1200;
-    const steps = 40;
-    const increment = score / steps;
-    let current = 0;
-    let step = 0;
+    // Animate score counting up
+    const duration = 1200
+    const steps = 40
+    const increment = score / steps
+    let current = 0
+    let step = 0
 
     const interval = setInterval(() => {
-      step++;
-      current = Math.min(Math.round(increment * step), score);
-      setAnimatedScore(current);
+      step++
+      current = Math.min(Math.round(increment * step), score)
+      setAnimatedScore(current)
       if (step >= steps) {
-        clearInterval(interval);
-        setShowConfetti(true);
-        setTimeout(() => setShowConfetti(false), 2000);
+        clearInterval(interval)
+        setShowConfetti(true)
+        setTimeout(() => setShowConfetti(false), 2000)
       }
-    }, duration / steps);
+    }, duration / steps)
 
-    return () => clearInterval(interval);
-  }, [score]);
+    return () => clearInterval(interval)
+  }, [score])
 
   return (
     <div className="relative inline-flex items-center justify-center">
@@ -120,14 +114,14 @@ export function ScoreGauge({
         />
       </svg>
       <div className="absolute flex flex-col items-center">
-        <span className="text-5xl font-bold tabular-nums text-[#333333]">
+        <span className="text-5xl font-bold tabular-nums text-[var(--brand-dark)]">
           {animatedScore}
         </span>
-        <span className="text-sm text-[#333333]/70">
+        <span className="text-sm text-muted-foreground">
           {"out of "}
           {max}
         </span>
       </div>
     </div>
-  );
+  )
 }
