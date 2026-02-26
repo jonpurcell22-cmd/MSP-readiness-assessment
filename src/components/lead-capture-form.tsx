@@ -65,11 +65,13 @@ export function LeadCaptureForm() {
         body: JSON.stringify(payload),
       })
 
-      if (!res.ok) {
-        throw new Error("Failed to start assessment")
-      }
+      const data = await res.json().catch(() => ({})) as { id?: string; error?: string }
 
-      const data = await res.json()
+      if (!res.ok) {
+        setError(data?.error ?? "Failed to start assessment. Please try again.")
+        setIsSubmitting(false)
+        return
+      }
 
       // Store additional fields in sessionStorage for later use
       if (typeof window !== "undefined") {
