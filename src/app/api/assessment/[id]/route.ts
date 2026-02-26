@@ -144,7 +144,7 @@ export async function PATCH(
     }
     if (typeof body.total_score === "number") updates.overall_score = body.total_score;
     if (typeof body.tier === "string") updates.readiness_tier = body.tier;
-    if (typeof body.completed_at === "string") updates.completed_at = body.completed_at;
+    // completed_at omitted so app works when DB has no completed_at column; add back after running migration
 
     const { error: updateError } = await supabase
       .from("assessments")

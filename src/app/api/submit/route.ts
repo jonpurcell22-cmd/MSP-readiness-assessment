@@ -69,7 +69,6 @@ function payloadToRow(payload: SubmitPayload): AssessmentInsert {
 
     pdf_url: null,
     ai_narrative: null,
-    completed_at: new Date().toISOString(),
   };
 }
 

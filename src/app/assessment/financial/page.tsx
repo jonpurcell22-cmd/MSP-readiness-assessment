@@ -79,7 +79,6 @@ function FinancialContextContent() {
           section_scores: sectionScores,
           total_score: totalScore,
           tier,
-          completed_at: new Date().toISOString(),
         }),
       })
 

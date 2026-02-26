@@ -51,9 +51,10 @@ export interface Database {
           ai_narrative: Record<string, unknown> | null;
           completed_at: string | null;
         };
-        Insert: Omit<Database["public"]["Tables"]["assessments"]["Row"], "id" | "created_at"> & {
+        Insert: Omit<Database["public"]["Tables"]["assessments"]["Row"], "id" | "created_at" | "completed_at"> & {
           id?: string;
           created_at?: string;
+          completed_at?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["assessments"]["Insert"]>;
       };
