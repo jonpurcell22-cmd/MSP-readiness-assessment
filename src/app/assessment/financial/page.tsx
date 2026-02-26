@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { Suspense, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { AssessmentLayout } from "@/components/assessment-layout"
 import { Button } from "@/components/ui/button"
@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { calculateSectionScores, calculateTotalScore, getTier } from "@/lib/scoring"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 
-export default function FinancialContextPage() {
+function FinancialContextContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const assessmentId = searchParams.get("id")
@@ -222,5 +222,13 @@ export default function FinancialContextPage() {
         </div>
       </div>
     </AssessmentLayout>
+  )
+}
+
+export default function FinancialContextPage() {
+  return (
+    <Suspense fallback={<AssessmentLayout rightContent={<span className="text-sm text-muted-foreground">Financial Context</span>}><div className="mx-auto max-w-[600px] animate-pulse rounded-lg bg-muted p-8" /></AssessmentLayout>}>
+      <FinancialContextContent />
+    </Suspense>
   )
 }
