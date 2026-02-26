@@ -75,14 +75,18 @@ export default function AssessmentSectionPage() {
       })
 
       if (direction === "next") {
-        if (sectionNum < 7) {
+        if (sectionNum < 6) {
           router.push(`/assessment/${sectionNum + 1}?id=${assessmentId}`)
+        } else if (sectionNum === 6) {
+          router.push(`/assessment/channel-gate?id=${assessmentId}`)
         } else {
           router.push(`/assessment/financial?id=${assessmentId}`)
         }
       } else {
-        if (sectionNum > 1) {
+        if (sectionNum > 1 && sectionNum < 7) {
           router.push(`/assessment/${sectionNum - 1}?id=${assessmentId}`)
+        } else if (sectionNum === 7) {
+          router.push(`/assessment/channel-gate?id=${assessmentId}`)
         } else {
           router.push("/")
         }

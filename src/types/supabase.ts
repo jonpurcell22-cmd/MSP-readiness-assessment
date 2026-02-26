@@ -49,6 +49,7 @@ export interface Database {
 
           pdf_url: string | null;
           ai_narrative: Record<string, unknown> | null;
+          completed_at: string | null;
         };
         Insert: Omit<Database["public"]["Tables"]["assessments"]["Row"], "id" | "created_at"> & {
           id?: string;

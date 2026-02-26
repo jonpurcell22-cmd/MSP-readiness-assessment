@@ -63,11 +63,21 @@ CREATE TABLE assessments (
   pdf_url TEXT,
 
   -- AI narrative (filled later)
-  ai_narrative JSONB
+  ai_narrative JSONB,
+
+  -- When the user completed the assessment (financial form submit)
+  completed_at TIMESTAMP WITH TIME ZONE
 );
 ```
 
 4. Confirm in **Table Editor** that the `assessments` table exists.
+
+**If the table already exists** and you need to add `completed_at`, run in SQL Editor:
+
+```sql
+ALTER TABLE assessments
+ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP WITH TIME ZONE;
+```
 
 ## 3. Get your API keys
 

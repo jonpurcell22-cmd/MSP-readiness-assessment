@@ -83,11 +83,14 @@ function FinancialContextContent() {
         }),
       })
 
-      if (!updateRes.ok) throw new Error("Failed to save results")
+      if (!updateRes.ok) {
+        const errBody = await updateRes.json().catch(() => ({}))
+        throw new Error((errBody as { error?: string })?.error ?? "Failed to save results")
+      }
 
       router.push(`/assessment/results/${assessmentId}`)
-    } catch {
-      setError("Something went wrong. Please try again.")
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Something went wrong. Please try again.")
       setSaving(false)
     }
   }

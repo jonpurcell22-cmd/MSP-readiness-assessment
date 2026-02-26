@@ -124,11 +124,11 @@ export function LeadCaptureForm() {
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="phone">Phone</Label>
+          <Label htmlFor="phone">Phone <span className="text-destructive">*</span></Label>
           <Input id="phone" name="phone" type="tel" placeholder="(555) 123-4567" />
         </div>
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="title">Title</Label>
+          <Label htmlFor="title">Title <span className="text-destructive">*</span></Label>
           <Select name="title">
             <SelectTrigger id="title">
               <SelectValue placeholder="Select your title" />
@@ -158,7 +158,7 @@ export function LeadCaptureForm() {
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="company_website">Company Website</Label>
+          <Label htmlFor="company_website">Company Website <span className="text-destructive">*</span></Label>
           <Input
             id="company_website"
             name="company_website"
@@ -166,7 +166,7 @@ export function LeadCaptureForm() {
           />
         </div>
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="product_category">Product Category</Label>
+          <Label htmlFor="product_category">Product Category <span className="text-destructive">*</span></Label>
           <Select name="product_category">
             <SelectTrigger id="product_category">
               <SelectValue placeholder="Select category" />
