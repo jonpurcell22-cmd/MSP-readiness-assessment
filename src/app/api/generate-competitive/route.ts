@@ -76,8 +76,9 @@ function buildUserPrompt(body: GenerateCompetitiveBody): string {
 }
 
 export async function POST(request: Request) {
+  let body: GenerateCompetitiveBody | undefined;
   try {
-    const body = (await request.json()) as GenerateCompetitiveBody;
+    body = (await request.json()) as GenerateCompetitiveBody;
     if (!body.companyName?.trim() || !body.productCategory?.trim()) {
       return NextResponse.json(
         { error: "Missing required fields: companyName, productCategory" },
@@ -144,17 +145,19 @@ export async function POST(request: Request) {
     return NextResponse.json(normalizeCompetitiveOutput(parsed));
   } catch (e) {
     console.error("Generate competitive API error:", e);
-    // Fallback: try without web search so the section still appears with a basic summary
-    try {
-      const fallback = await generateCompetitiveFallback(body);
-      return NextResponse.json(fallback);
-    } catch (fallbackErr) {
-      console.error("Competitive fallback also failed:", fallbackErr);
-      return NextResponse.json(
-        { error: e instanceof Error ? e.message : "Competitive research failed" },
-        { status: 500 }
-      );
+    // Fallback: try without web search so the section still appears with a basic summary (only if we have body)
+    if (body) {
+      try {
+        const fallback = await generateCompetitiveFallback(body);
+        return NextResponse.json(fallback);
+      } catch (fallbackErr) {
+        console.error("Competitive fallback also failed:", fallbackErr);
+      }
     }
+    return NextResponse.json(
+      { error: e instanceof Error ? e.message : "Competitive research failed" },
+      { status: 500 }
+    );
   }
 }
 
