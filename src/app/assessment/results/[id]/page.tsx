@@ -11,10 +11,12 @@ import {
 } from "@/lib/mock-ai"
 import {
   calculateProjections,
-  formatCurrency,
 } from "@/lib/financial-projections"
 import type { FinancialInputs } from "@/lib/financial-projections"
 import { ResultsContent } from "./results-content"
+import type { Database } from "@/types/supabase"
+
+type AssessmentRow = Database["public"]["Tables"]["assessments"]["Row"]
 
 interface AssessmentData {
   id: string
@@ -25,7 +27,33 @@ interface AssessmentData {
   section_scores: SectionTotals
   total_score: number
   tier: Tier
-  completed_at: string
+  completed_at?: string
+}
+
+/** Map DB row (snake_case, section_*_total) to results page shape (section_scores, total_score, tier). */
+function rowToAssessmentData(row: AssessmentRow): AssessmentData {
+  const total_score = row.overall_score ?? 0
+  const tier = (row.readiness_tier as Tier) || getTier(total_score)
+  const section_scores: SectionTotals = {
+    section1: row.section_1_total ?? 0,
+    section2: row.section_2_total ?? 0,
+    section3: row.section_3_total ?? 0,
+    section4: row.section_4_total ?? 0,
+    section5: row.section_5_total ?? 0,
+    section6: row.section_6_total ?? 0,
+    section7: row.section_7_total ?? null,
+  }
+  return {
+    id: row.id,
+    company_name: row.company_name,
+    contact_name: row.full_name,
+    email: row.email,
+    answers: {},
+    section_scores,
+    total_score,
+    tier,
+    completed_at: row.completed_at ?? undefined,
+  }
 }
 
 export default async function ResultsPage({
@@ -46,8 +74,9 @@ export default async function ResultsPage({
     notFound()
   }
 
-  const assessment = data as unknown as AssessmentData
-  const tier = (assessment.tier as Tier) || getTier(assessment.total_score || 0)
+  const row = data as AssessmentRow
+  const assessment = rowToAssessmentData(row)
+  const tier = assessment.tier
   const tierDescription = getTierDescription(tier)
 
   // Generate mock AI content (section_scores is SectionTotals, compatible with Record<string, number>)
