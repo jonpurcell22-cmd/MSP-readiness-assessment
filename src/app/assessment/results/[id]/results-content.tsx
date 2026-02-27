@@ -13,6 +13,7 @@ import type { SectionTotals, Answers } from "@/types/assessment"
 import { toPercentageScore } from "@/lib/scoring"
 import type { ProjectionsResult, FinancialInputs } from "@/lib/financial-projections"
 import { formatCurrency } from "@/lib/financial-projections"
+import type { DiyExpertEstimate } from "@/lib/pdf-financials"
 import { Calendar, Mail, Phone, FileDown, Compass } from "lucide-react"
 
 interface CompetitorInsight {
@@ -38,11 +39,18 @@ interface ResultsContentProps {
   executiveSummary: string
   sectionInterpretations: Record<string, string>
   competitiveLandscape: { summary: string; competitors: CompetitorInsight[] }
-  projections: ProjectionsResult
+  projections: ResultsProjections
+}
+
+/** Extended projections shape: base ProjectionsResult plus optional cost-of-delay and DIY/Expert. */
+export type ResultsProjections = ProjectionsResult & {
+  costOfDelay?: number
+  diyEstimate?: DiyExpertEstimate
+  expertEstimate?: DiyExpertEstimate
 }
 
 /** Derive display shape from ProjectionsResult for the financial table and cards. */
-function toProjectionsDisplay(p: ProjectionsResult): {
+function toProjectionsDisplay(p: ResultsProjections): {
   yearlyProjections: Array<{
     year: number
     newPartners: number
@@ -92,9 +100,9 @@ function toProjectionsDisplay(p: ProjectionsResult): {
         cumulativeRevenue: cum3,
       },
     ],
-    costOfDelay: 0,
-    diyEstimate: { cost: 0, timeMonths: 0, risk: "—" },
-    expertEstimate: { cost: 0, timeMonths: 0, risk: "—" },
+    costOfDelay: p.costOfDelay ?? 0,
+    diyEstimate: p.diyEstimate ?? { cost: 0, timeMonths: 0, risk: "—" },
+    expertEstimate: p.expertEstimate ?? { cost: 0, timeMonths: 0, risk: "—" },
   }
 }
 

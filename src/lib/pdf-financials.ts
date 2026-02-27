@@ -88,6 +88,34 @@ export function getCostOfDelay(inputs: FinancialInputs): {
   };
 }
 
+/**
+ * DIY vs Expert-Guided build estimates for results page (aligned with PDF narrative).
+ * Ranges from spec: DIY $500K-$900K over 18-24 months; Expert $60K-$200K over 6-9 months.
+ */
+export interface DiyExpertEstimate {
+  cost: number;
+  timeMonths: number;
+  risk: string;
+}
+
+export function getDiyExpertEstimates(): {
+  diy: DiyExpertEstimate;
+  expert: DiyExpertEstimate;
+} {
+  return {
+    diy: {
+      cost: 700_000, // midpoint of $500K-$900K
+      timeMonths: 21, // midpoint of 18-24
+      risk: "VP/Director hire + 1-2 channel managers; time to productivity 6-9 months. Revenue starts month 15-18.",
+    },
+    expert: {
+      cost: 130_000, // midpoint of $60K-$200K
+      timeMonths: 8, // midpoint of 6-9
+      risk: "Launch-ready playbook; revenue 6-9 months sooner. Internal hire still needed but avoids 12-month learning curve.",
+    },
+  };
+}
+
 /** Format dollar amounts with comma separators (e.g. $125,000, $50,000,000). */
 export function formatCurrency(n: number): string {
   return `$${Math.round(n).toLocaleString("en-US", { maximumFractionDigits: 0, minimumFractionDigits: 0 })}`;
