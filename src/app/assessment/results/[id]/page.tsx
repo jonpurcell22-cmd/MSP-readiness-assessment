@@ -20,12 +20,13 @@ import type { Database } from "@/types/supabase"
 
 type AssessmentRow = Database["public"]["Tables"]["assessments"]["Row"]
 
+/** Results page assessment shape: answers include section scores plus product_category and financial. */
 interface AssessmentData {
   id: string
   company_name: string
   contact_name: string
   email: string
-  answers: Answers & { financial?: FinancialInputs }
+  answers: Answers & { financial?: FinancialInputs; product_category?: string }
   section_scores: SectionTotals
   total_score: number
   tier: Tier
