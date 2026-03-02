@@ -170,7 +170,7 @@ CRITICAL: The reader must feel that a human expert read their specific answers a
 Voice: Authoritative, specific, operational. You have seen dozens of vendors attempt MSP channel builds. You know which patterns lead to success and which to failure. You name the problem, explain why it matters to MSPs in concrete terms (margin, activation, conflict, distribution), and say exactly what to do next. Never arrogant; never generic.
 
 RULES:
-- Executive summary: Open with what their score and tier mean for them specifically. Name their single biggest blocker (one dimension/question where a low score will block success) and their single biggest opportunity (one strength or dimension to leverage). Tie each to a question name and score. One clear next step. End with exactly: "Regardless of where you landed, the logical next step is a complimentary 90-minute deep-dive assessment with an expert who can uncover the nuances a self-assessment cannot. No cost, no obligation."
+- Executive summary: Open with what their score and tier mean for them specifically. Name their single biggest blocker (one dimension/question where a low score will block success) and their single biggest opportunity (one strength or dimension to leverage). Tie each to a question name and score. One clear next step. End with exactly: "The next step is a complimentary 90-minute deep-dive assessment with an expert who can uncover the nuances a self-assessment cannot. No cost, no obligation."
 - Section interpretations: For each section, cite at least one specific question name and its score. Explain what that pattern means for MSPs operationally (e.g. "A 2 on Multi-Tenant Management means MSPs cannot run one instance per end customer; that drives up their cost to deliver and kills margin"). One concrete, actionable recommendation per section. No section may sound like it could apply to another vendor; if it could, rewrite it to cite their actual scores and answers.
 - Financial commentary: Reference their actual ARR and ACV. Tie the projection to their scale and category. Be conservative; note assumptions.
 - Cost of delay: Tie to their product category and, if relevant, their competitive/distribution scores. Why waiting costs them specifically.
@@ -243,7 +243,7 @@ FINANCIAL DATA (reference ARR and ACV explicitly in financial_commentary):
 Return ONLY valid JSON (no markdown, no backticks, no preamble). Every string must be answer-specific; no generic language.
 
 {
-  "executive_summary": "4+ sentences. What their score/tier means for them. Name their single biggest blocker (question + score) and single biggest opportunity (question + score). One clear recommendation. End with exactly: Regardless of where you landed, the logical next step is a complimentary 90-minute deep-dive assessment with an expert who can uncover the nuances a self-assessment cannot. No cost, no obligation.",
+  "executive_summary": "4+ sentences. What their score/tier means for them. Name their single biggest blocker (question + score) and single biggest opportunity (question + score). One clear recommendation. End with exactly: The next step is a complimentary 90-minute deep-dive assessment with an expert who can uncover the nuances a self-assessment cannot. No cost, no obligation.",
   "section_interpretations": [
     {
       "section_number": 1,
@@ -298,7 +298,7 @@ export function buildNarrativePromptPart1(data: NarrativeInput): string {
 
 Return ONLY valid JSON (no markdown, no backticks, no preamble):
 {
-  "executive_summary": "4+ sentences. What their score/tier means. Name single biggest blocker (question + score) and single biggest opportunity (question + score). One clear recommendation. End with exactly: Regardless of where you landed, the logical next step is a complimentary 90-minute deep-dive assessment with an expert who can uncover the nuances a self-assessment cannot. No cost, no obligation.",
+  "executive_summary": "4+ sentences. What their score/tier means. Name single biggest blocker (question + score) and single biggest opportunity (question + score). One clear recommendation. End with exactly: The next step is a complimentary 90-minute deep-dive assessment with an expert who can uncover the nuances a self-assessment cannot. No cost, no obligation.",
   "top_3_critical_gaps": ["First gap: question name and score, why it blocks MSP success.", "Second gap.", "Third gap."],
   "top_2_strengths": ["First strength: question/section and score, how to leverage.", "Second strength."]
 }
@@ -515,7 +515,7 @@ export function generateFallbackNarrative(payload: {
       : weakest.length > 0
         ? " Focus on these areas first, then build your program design and recruitment plan."
         : "";
-  const executive_summary = `Your overall score of ${payload.computed.overallScore}/100 places you in the ${tierLabel} tier. ${weakestPhrase}${strongestPhrase}${redFlagsPhrase} Regardless of where you landed, the logical next step is a complimentary 90-minute deep-dive assessment with an expert who can uncover the nuances a self-assessment cannot. No cost, no obligation.`;
+  const executive_summary = `Your overall score of ${payload.computed.overallScore}/100 places you in the ${tierLabel} tier. ${weakestPhrase}${strongestPhrase}${redFlagsPhrase} The next step is a complimentary 90-minute deep-dive assessment with an expert who can uncover the nuances a self-assessment cannot. No cost, no obligation.`;
 
   const financial_commentary = `Based on your ARR of $${payload.financials.arr ?? "N/A"} and ACV of $${payload.financials.acv ?? "N/A"}, the 3-year MSP revenue projections in this report use conservative assumptions. Your product category and readiness level influence how quickly you can ramp.`;
   const cost_of_delay_narrative = `Every quarter without an MSP channel has a real cost in higher acquisition spend and unrealized partner-sourced revenue. In ${payload.contact.productCategory ?? payload.financials.productCategory ?? "your category"}, competitors and distributors are moving now.`;
