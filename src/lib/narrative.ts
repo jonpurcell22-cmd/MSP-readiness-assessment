@@ -666,3 +666,25 @@ export async function getNarrative(payload: PayloadForNarrative): Promise<Narrat
     return generateFallbackNarrative(payload);
   }
 }
+
+/**
+ * Generate narrative by running parts 1–3 in parallel (~3x faster than single getNarrative).
+ * Used by results-page background generation.
+ */
+export async function getNarrativeParallel(payload: PayloadForNarrative): Promise<NarrativeOutput> {
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return generateFallbackNarrative(payload);
+  }
+  const [part1, part2, part3] = await Promise.all([
+    getNarrativePart1(payload),
+    getNarrativePart2(payload),
+    getNarrativePart3(payload),
+  ]);
+  return {
+    executive_summary: part1.executive_summary,
+    section_interpretations: part2.section_interpretations,
+    financial_commentary: part3.financial_commentary,
+    cost_of_delay_narrative: part3.cost_of_delay_narrative,
+    roadmap_narrative: part3.roadmap_narrative,
+  };
+}

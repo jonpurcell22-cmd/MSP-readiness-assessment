@@ -17,6 +17,7 @@ import { isNarrativeOutput } from "@/lib/narrative"
 import { ResultsContent } from "./results-content"
 import type { ResultsProjections } from "./results-content"
 import type { Database } from "@/types/supabase"
+import type { CompetitiveLandscapeOutput } from "@/types/competitive"
 
 type AssessmentRow = Database["public"]["Tables"]["assessments"]["Row"]
 
@@ -94,13 +95,15 @@ export default async function ResultsPage({
   }
 
   const row = data as AssessmentRow
+  const narrative = row.ai_narrative
+
+  // Page loads immediately with stored or mock content; client triggers generation when narrative is missing
   const assessment = rowToAssessmentData(row)
   const tier = assessment.tier
   const tierDescription = getTierDescription(tier)
   const productCategory = (assessment.answers as Record<string, unknown>)?.product_category as string || "Technology"
 
-  // Executive summary: use stored AI narrative when present
-  const narrative = row.ai_narrative
+  // Executive summary: use stored or just-generated AI narrative
   const executiveSummary =
     isNarrativeOutput(narrative)
       ? narrative.executive_summary
@@ -129,11 +132,30 @@ export default async function ResultsPage({
     }
   }
 
-  const competitiveLandscapeText = generateCompetitiveLandscape(productCategory, assessment.company_name)
-  const competitiveLandscape = {
-    summary: competitiveLandscapeText,
-    competitors: getMockCompetitors(productCategory),
-  }
+  // Competitive landscape: use AI data from narrative when present
+  const storedCompetitive = (narrative as Record<string, unknown> | null)?.competitive_landscape as
+    | CompetitiveLandscapeOutput
+    | undefined
+  const competitiveLandscape =
+    storedCompetitive != null
+      ? {
+          summary: [
+            storedCompetitive.landscapeSummary,
+            storedCompetitive.strategicImplication,
+          ]
+            .filter(Boolean)
+            .join(" "),
+          competitors: storedCompetitive.competitors.map((c) => ({
+            company: c.name,
+            strength: c.programEvidence,
+            channelApproach: c.mspProgramStatus,
+            opportunity: c.mspRelevantWeakness,
+          })),
+        }
+      : {
+          summary: generateCompetitiveLandscape(productCategory, assessment.company_name),
+          competitors: getMockCompetitors(productCategory),
+        }
 
   // Financial projections (for 3-year table)
   const financialInputs: FinancialInputs = assessment.answers?.financial || {
@@ -175,6 +197,8 @@ export default async function ResultsPage({
       sectionInterpretations={sectionInterpretations}
       competitiveLandscape={competitiveLandscape}
       projections={projections}
+      hasAINarrative={isNarrativeOutput(narrative)}
+      assessmentId={id}
     />
   )
 }

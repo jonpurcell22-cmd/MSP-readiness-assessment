@@ -225,28 +225,51 @@ export default function AdminPage() {
     <div className="flex min-h-screen flex-col bg-background">
       <Header
         rightContent={
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={async () => {
-              if (!authToken) return
-              const res = await fetch("/api/admin/export", {
-                headers: { Authorization: `Bearer ${authToken}` },
-              })
-              if (res.ok) {
-                const blob = await res.blob()
-                const url = URL.createObjectURL(blob)
-                const a = document.createElement("a")
-                a.href = url
-                a.download = `assessments-${new Date().toISOString().split("T")[0]}.csv`
-                a.click()
-                URL.revokeObjectURL(url)
-              }
-            }}
-          >
-            <Download className="mr-1 h-4 w-4" />
-            Export CSV
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                if (!authToken) return
+                const res = await fetch("/api/admin/test-pdf")
+                if (res.ok) {
+                  const blob = await res.blob()
+                  const url = URL.createObjectURL(blob)
+                  const a = document.createElement("a")
+                  a.href = url
+                  const disposition = res.headers.get("Content-Disposition")
+                  const match = disposition?.match(/filename="?([^";]+)"?/)
+                  a.download = match?.[1] ?? "MSP-Readiness-TEST.pdf"
+                  a.click()
+                  URL.revokeObjectURL(url)
+                }
+              }}
+            >
+              Test PDF
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                if (!authToken) return
+                const res = await fetch("/api/admin/export", {
+                  headers: { Authorization: `Bearer ${authToken}` },
+                })
+                if (res.ok) {
+                  const blob = await res.blob()
+                  const url = URL.createObjectURL(blob)
+                  const a = document.createElement("a")
+                  a.href = url
+                  a.download = `assessments-${new Date().toISOString().split("T")[0]}.csv`
+                  a.click()
+                  URL.revokeObjectURL(url)
+                }
+              }}
+            >
+              <Download className="mr-1 h-4 w-4" />
+              Export CSV
+            </Button>
+          </div>
         }
       />
       <main className="mx-auto w-full max-w-[1100px] flex-1 px-6 py-8">

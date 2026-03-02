@@ -49,9 +49,10 @@ export async function POST(
       );
     }
 
+    const completedAt = new Date().toISOString();
     const { error: updateError } = await supabase
       .from("assessments")
-      .update({ ai_narrative: narrative } as never)
+      .update({ ai_narrative: narrative, completed_at: completedAt } as never)
       .eq("id", id);
 
     if (updateError) {

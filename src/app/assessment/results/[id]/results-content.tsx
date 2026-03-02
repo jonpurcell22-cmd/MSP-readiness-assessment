@@ -1,5 +1,7 @@
 "use client"
 
+import { useEffect, useState, useRef } from "react"
+import { useRouter } from "next/navigation"
 import { AssessmentLayout } from "@/components/assessment-layout"
 import { TierBadge } from "@/components/tier-badge"
 import { ScoreGauge } from "@/components/score-gauge"
@@ -14,7 +16,7 @@ import { toPercentageScore } from "@/lib/scoring"
 import type { ProjectionsResult, FinancialInputs } from "@/lib/financial-projections"
 import { formatCurrency } from "@/lib/financial-projections"
 import type { DiyExpertEstimate } from "@/lib/pdf-financials"
-import { Calendar, Mail, Phone, FileDown, Compass } from "lucide-react"
+import { Calendar, Mail, FileDown, Compass } from "lucide-react"
 
 interface CompetitorInsight {
   company: string
@@ -40,6 +42,9 @@ interface ResultsContentProps {
   sectionInterpretations: Record<string, string>
   competitiveLandscape: { summary: string; competitors: CompetitorInsight[] }
   projections: ResultsProjections
+  /** When false and assessmentId is set, client will trigger background narrative generation and refresh. */
+  hasAINarrative?: boolean
+  assessmentId?: string
 }
 
 /** Extended projections shape: base ProjectionsResult plus optional cost-of-delay and DIY/Expert. */
@@ -114,11 +119,34 @@ export function ResultsContent({
   sectionInterpretations,
   competitiveLandscape,
   projections: projectionsRaw,
+  hasAINarrative = true,
+  assessmentId,
 }: ResultsContentProps) {
   const projections = toProjectionsDisplay(projectionsRaw)
+  const router = useRouter()
+  const [generating, setGenerating] = useState(false)
+  const startedRef = useRef(false)
+
+  useEffect(() => {
+    if (hasAINarrative || !assessmentId || startedRef.current) return
+    startedRef.current = true
+    setGenerating(true)
+    fetch(`/api/assessment/${assessmentId}/generate-narrative`, { method: "POST" })
+      .then((res) => {
+        if (res.ok) router.refresh()
+      })
+      .catch(() => setGenerating(false))
+      .finally(() => setGenerating(false))
+  }, [hasAINarrative, assessmentId, router])
+
   return (
     <AssessmentLayout>
       <div className="flex flex-col gap-14">
+        {!hasAINarrative && (
+          <div className="animate-fade-in-up rounded-lg border border-[var(--brand-green)] bg-[var(--brand-green)]/10 px-4 py-4 text-center text-sm font-medium text-[var(--brand-dark)]">
+            Your AI executive summary and competitive analysis are being generated. This may take up to 30 seconds. The page will refresh automatically when ready.
+          </div>
+        )}
         {/* Hero Section */}
         <div className="animate-fade-in-up flex flex-col items-center gap-6 pt-4 text-center">
           <div>
@@ -353,21 +381,6 @@ export function ResultsContent({
               </table>
             </div>
 
-            {/* Cost of Delay */}
-            <Card className="border-amber-200 bg-amber-50 shadow-none">
-              <CardContent className="py-5 px-5">
-                <p className="text-sm font-semibold text-amber-800">
-                  Cost of Delay
-                </p>
-                <p className="mt-1 text-3xl font-bold text-amber-900">
-                  {formatCurrency(projections.costOfDelay)}
-                  <span className="ml-2 text-sm font-normal text-amber-700">
-                    per quarter in missed channel revenue
-                  </span>
-                </p>
-              </CardContent>
-            </Card>
-
             {/* DIY vs Expert */}
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
               <Card className="border-border shadow-none">
@@ -416,9 +429,8 @@ export function ResultsContent({
             Ready to Accelerate Your Channel Strategy?
           </h2>
           <p className="mx-auto mt-4 max-w-[500px] text-sm leading-relaxed text-white/70">
-            Our MSP channel experts have helped dozens of technology vendors
-            build profitable partner programs. Schedule a free strategy call to
-            discuss your results.
+            Schedule your Free 90min Deep Dive to discuss your results with an
+            MSP channel expert.
           </p>
           <div className="mt-8">
             <Button
@@ -432,24 +444,17 @@ export function ResultsContent({
                 rel="noopener noreferrer"
               >
                 <Calendar className="mr-2 h-5 w-5" />
-                Schedule a Strategy Call
+                Schedule Your Call Now
               </a>
             </Button>
           </div>
-          <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center sm:gap-8">
+          <div className="mt-8 flex justify-center">
             <a
               href="mailto:info@untappedchannelstrategy.com"
               className="flex items-center gap-2 text-sm text-white/60 transition-colors hover:text-white"
             >
               <Mail className="h-4 w-4" />
               info@untappedchannelstrategy.com
-            </a>
-            <a
-              href="tel:+15551234567"
-              className="flex items-center gap-2 text-sm text-white/60 transition-colors hover:text-white"
-            >
-              <Phone className="h-4 w-4" />
-              (555) 123-4567
             </a>
           </div>
         </div>

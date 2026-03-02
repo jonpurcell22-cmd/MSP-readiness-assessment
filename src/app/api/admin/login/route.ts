@@ -15,7 +15,7 @@ export async function POST(request: Request) {
   }
 
   const setCookie = getAdminSetCookieHeader();
-  const res = NextResponse.json({ ok: true });
+  const res = NextResponse.json({ ok: true, token: "authenticated" });
   if (setCookie) res.headers.set("Set-Cookie", setCookie);
   return res;
 }

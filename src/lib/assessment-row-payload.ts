@@ -6,9 +6,17 @@
 import { generateFallbackNarrative, isNarrativeOutput } from "@/lib/narrative";
 import type { NarrativeOutput } from "@/lib/narrative";
 import type { BuildPDFPayload } from "@/lib/pdf-build";
-import type { SectionScores } from "@/types/assessment";
+import type {
+  SectionScores,
+  ContactInfo,
+  FinancialData,
+  ComputedResults,
+  SectionTotals,
+  ExistingMspRelationships,
+} from "@/types/assessment";
 import type { Database } from "@/types/supabase";
 import type { AssessmentEmailPayload } from "@/lib/send-emails";
+import type { SubmitPayload } from "@/app/api/submit/route";
 
 type AssessmentRow = Database["public"]["Tables"]["assessments"]["Row"];
 
@@ -20,6 +28,59 @@ function toSectionScores(row: Record<string, number> | null): SectionScores | nu
     q3: row.q3 ?? 0,
     q4: row.q4 ?? 0,
     q5: row.q5 ?? 0,
+  };
+}
+
+/**
+ * Build SubmitPayload from an assessment row for narrative generation (e.g. on results page when ai_narrative is null).
+ */
+export function rowToSubmitPayload(row: AssessmentRow): SubmitPayload {
+  const sectionTotals: SectionTotals = {
+    section1: row.section_1_total ?? 0,
+    section2: row.section_2_total ?? 0,
+    section3: row.section_3_total ?? 0,
+    section4: row.section_4_total ?? 0,
+    section5: row.section_5_total ?? 0,
+    section6: row.section_6_total ?? 0,
+    section7: row.section_7_total ?? null,
+  };
+  const contact: ContactInfo = {
+    fullName: row.full_name,
+    email: row.email,
+    phone: row.phone ?? "",
+    title: (row.title as ContactInfo["title"]) ?? "",
+    companyName: row.company_name,
+    companyWebsite: row.company_website ?? "",
+    productCategory: (row.product_category as ContactInfo["productCategory"]) ?? "",
+  };
+  const financials: FinancialData = {
+    arr: row.arr,
+    acv: row.acv,
+    customerCount: row.customer_count,
+    directRevenuePct: row.direct_revenue_pct ?? 0,
+    salesCycleDays: row.sales_cycle_days,
+    cac: row.cac,
+    existingMspRelationships: row.existing_msp_relationships as ExistingMspRelationships | null,
+  };
+  const computed: ComputedResults = {
+    sectionTotals,
+    overallScore: row.overall_score ?? 0,
+    readinessTier: (row.readiness_tier as ComputedResults["readinessTier"]) ?? "emerging",
+    redFlags: row.red_flags ?? [],
+    section7Skipped: row.section_7_skipped ?? true,
+  };
+  return {
+    contact,
+    financials,
+    section1: toSectionScores(row.section_1_scores),
+    section2: toSectionScores(row.section_2_scores),
+    section3: toSectionScores(row.section_3_scores),
+    section4: toSectionScores(row.section_4_scores),
+    section5: toSectionScores(row.section_5_scores),
+    section6: toSectionScores(row.section_6_scores),
+    section7: toSectionScores(row.section_7_scores),
+    section7Skipped: row.section_7_skipped ?? true,
+    computed,
   };
 }
 
