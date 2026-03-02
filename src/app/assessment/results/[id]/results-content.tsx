@@ -17,6 +17,7 @@ import type { ProjectionsResult, FinancialInputs } from "@/lib/financial-project
 import { formatCurrency } from "@/lib/financial-projections"
 import type { DiyExpertEstimate } from "@/lib/pdf-financials"
 import { Calendar, Mail, FileDown, Compass } from "lucide-react"
+import { Spinner } from "@/components/ui/spinner"
 
 interface CompetitorInsight {
   company: string
@@ -205,16 +206,25 @@ export function ResultsContent({
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-col gap-4">
-                {executiveSummary.split("\n\n").map((paragraph, i) => (
-                  <p
-                    key={i}
-                    className="text-sm leading-relaxed text-muted-foreground"
-                  >
-                    {paragraph}
+              {hasAINarrative ? (
+                <div className="flex flex-col gap-4">
+                  {executiveSummary.split("\n\n").map((paragraph, i) => (
+                    <p
+                      key={i}
+                      className="text-sm leading-relaxed text-muted-foreground"
+                    >
+                      {paragraph}
+                    </p>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center gap-4 py-8">
+                  <Spinner className="size-8 text-[var(--brand-green)]" />
+                  <p className="text-sm text-muted-foreground">
+                    This may take up to 30 seconds to load.
                   </p>
-                ))}
-              </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -252,52 +262,63 @@ export function ResultsContent({
             </CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-5">
-            <p className="text-sm leading-relaxed text-muted-foreground">
-              {competitiveLandscape.summary}
-            </p>
-            <div className="overflow-x-auto rounded-lg border border-border">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="bg-[var(--brand-subtle)]">
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-editorial text-[var(--brand-dark)]">
-                      Competitor
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-editorial text-[var(--brand-dark)]">
-                      Strength
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-editorial text-[var(--brand-dark)]">
-                      Channel Approach
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-editorial text-[var(--brand-dark)]">
-                      Status
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {competitiveLandscape.competitors.map((comp, i) => (
-                    <tr
-                      key={i}
-                      className="border-t border-border transition-colors hover:bg-muted/50"
-                    >
-                      <td className="px-4 py-3 font-medium text-foreground">
-                        {comp.company}
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground">
-                        {comp.strength}
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground">
-                        {comp.channelApproach}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="inline-flex items-center rounded-full bg-[var(--brand-green)]/15 px-2.5 py-0.5 text-xs font-semibold text-[var(--brand-dark)]">
-                          {comp.opportunity}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            {hasAINarrative ? (
+              <>
+                <p className="text-sm leading-relaxed text-muted-foreground">
+                  {competitiveLandscape.summary}
+                </p>
+                <div className="overflow-x-auto rounded-lg border border-border">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-[var(--brand-subtle)]">
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-editorial text-[var(--brand-dark)]">
+                          Competitor
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-editorial text-[var(--brand-dark)]">
+                          Strength
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-editorial text-[var(--brand-dark)]">
+                          Channel Approach
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-editorial text-[var(--brand-dark)]">
+                          Status
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {competitiveLandscape.competitors.map((comp, i) => (
+                        <tr
+                          key={i}
+                          className="border-t border-border transition-colors hover:bg-muted/50"
+                        >
+                          <td className="px-4 py-3 font-medium text-foreground">
+                            {comp.company}
+                          </td>
+                          <td className="px-4 py-3 text-muted-foreground">
+                            {comp.strength}
+                          </td>
+                          <td className="px-4 py-3 text-muted-foreground">
+                            {comp.channelApproach}
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="inline-flex items-center rounded-full bg-[var(--brand-green)]/15 px-2.5 py-0.5 text-xs font-semibold text-[var(--brand-dark)]">
+                              {comp.opportunity}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            ) : (
+              <div className="flex flex-col items-center justify-center gap-4 py-8">
+                <Spinner className="size-8 text-[var(--brand-green)]" />
+                <p className="text-sm text-muted-foreground">
+                  This may take up to 30 seconds to load.
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
