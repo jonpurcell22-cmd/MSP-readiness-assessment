@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useState, useRef } from "react"
-import { useRouter } from "next/navigation"
 import { AssessmentLayout } from "@/components/assessment-layout"
 import { TierBadge } from "@/components/tier-badge"
 import { ScoreGauge } from "@/components/score-gauge"
@@ -124,30 +123,74 @@ export function ResultsContent({
   assessmentId,
 }: ResultsContentProps) {
   const projections = toProjectionsDisplay(projectionsRaw)
-  const router = useRouter()
-  const [generating, setGenerating] = useState(false)
+  // Local state for AI content so we can update exec summary and competitive landscape in place (no full refresh)
+  const [localExecutiveSummary, setLocalExecutiveSummary] = useState<string | null>(
+    hasAINarrative ? executiveSummary : null
+  )
+  const [localCompetitiveLandscape, setLocalCompetitiveLandscape] = useState<{
+    summary: string
+    competitors: CompetitorInsight[]
+  } | null>(hasAINarrative ? competitiveLandscape : null)
   const startedRef = useRef(false)
 
   useEffect(() => {
     if (hasAINarrative || !assessmentId || startedRef.current) return
     startedRef.current = true
-    setGenerating(true)
+
+    let cancelled = false
+    const pollInterval = 2000
+    const maxWait = 60_000
+
     fetch(`/api/assessment/${assessmentId}/generate-narrative`, { method: "POST" })
-      .then((res) => {
-        if (res.ok) router.refresh()
+      .then(() => {
+        if (cancelled) return
+        const deadline = Date.now() + maxWait
+        const poll = async () => {
+          if (cancelled || Date.now() > deadline) return
+          try {
+            const res = await fetch(`/api/assessment/${assessmentId}/narrative`)
+            if (!res.ok || cancelled) return
+            const data = (await res.json()) as {
+              executiveSummary: string | null
+              competitiveLandscape: { summary: string; competitors: CompetitorInsight[] } | null
+            }
+            if (data.executiveSummary != null && data.executiveSummary !== "")
+              setLocalExecutiveSummary(data.executiveSummary)
+            if (
+              data.competitiveLandscape != null &&
+              (data.competitiveLandscape.summary || data.competitiveLandscape.competitors?.length)
+            )
+              setLocalCompetitiveLandscape(data.competitiveLandscape)
+            if (
+              data.executiveSummary &&
+              data.competitiveLandscape?.competitors?.length != null &&
+              data.competitiveLandscape.competitors.length > 0
+            )
+              return
+          } catch {
+            // ignore
+          }
+          if (!cancelled && Date.now() < deadline) setTimeout(poll, pollInterval)
+        }
+        setTimeout(poll, pollInterval)
       })
-      .catch(() => setGenerating(false))
-      .finally(() => setGenerating(false))
-  }, [hasAINarrative, assessmentId, router])
+      .catch(() => {})
+
+    return () => {
+      cancelled = true
+    }
+  }, [hasAINarrative, assessmentId])
 
   return (
     <AssessmentLayout>
       <div className="flex flex-col gap-14">
-        {!hasAINarrative && (
-          <div className="animate-fade-in-up rounded-lg border border-[var(--brand-green)] bg-[var(--brand-green)]/10 px-4 py-4 text-center text-sm font-medium text-[var(--brand-dark)]">
-            Your AI executive summary and competitive analysis are being generated. This may take up to 30 seconds. The page will refresh automatically when ready.
-          </div>
-        )}
+        {!hasAINarrative &&
+          (!localExecutiveSummary ||
+            !localCompetitiveLandscape?.competitors?.length) && (
+            <div className="animate-fade-in-up rounded-lg border border-[var(--brand-green)] bg-[var(--brand-green)]/10 px-4 py-4 text-center text-sm font-medium text-[var(--brand-dark)]">
+              Your AI executive summary and competitive analysis are being generated. May take up to 30 seconds to load.
+            </div>
+          )}
         {/* Hero Section */}
         <div className="animate-fade-in-up flex flex-col items-center gap-6 pt-4 text-center">
           <div>
@@ -206,22 +249,24 @@ export function ResultsContent({
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {hasAINarrative ? (
+              {(localExecutiveSummary ?? (hasAINarrative ? executiveSummary : null)) ? (
                 <div className="flex flex-col gap-4">
-                  {executiveSummary.split("\n\n").map((paragraph, i) => (
-                    <p
-                      key={i}
-                      className="text-sm leading-relaxed text-muted-foreground"
-                    >
-                      {paragraph}
-                    </p>
-                  ))}
+                  {(localExecutiveSummary ?? executiveSummary)
+                    .split("\n\n")
+                    .map((paragraph, i) => (
+                      <p
+                        key={i}
+                        className="text-sm leading-relaxed text-muted-foreground"
+                      >
+                        {paragraph}
+                      </p>
+                    ))}
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center gap-4 py-8">
                   <Spinner className="size-8 text-[var(--brand-green)]" />
                   <p className="text-sm text-muted-foreground">
-                    This may take up to 30 seconds to load.
+                    May take up to 30 seconds to load.
                   </p>
                 </div>
               )}
@@ -262,63 +307,70 @@ export function ResultsContent({
             </CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-5">
-            {hasAINarrative ? (
-              <>
-                <p className="text-sm leading-relaxed text-muted-foreground">
-                  {competitiveLandscape.summary}
-                </p>
-                <div className="overflow-x-auto rounded-lg border border-border">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="bg-[var(--brand-subtle)]">
-                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-editorial text-[var(--brand-dark)]">
-                          Competitor
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-editorial text-[var(--brand-dark)]">
-                          Strength
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-editorial text-[var(--brand-dark)]">
-                          Channel Approach
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-editorial text-[var(--brand-dark)]">
-                          Status
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {competitiveLandscape.competitors.map((comp, i) => (
-                        <tr
-                          key={i}
-                          className="border-t border-border transition-colors hover:bg-muted/50"
-                        >
-                          <td className="px-4 py-3 font-medium text-foreground">
-                            {comp.company}
-                          </td>
-                          <td className="px-4 py-3 text-muted-foreground">
-                            {comp.strength}
-                          </td>
-                          <td className="px-4 py-3 text-muted-foreground">
-                            {comp.channelApproach}
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className="inline-flex items-center rounded-full bg-[var(--brand-green)]/15 px-2.5 py-0.5 text-xs font-semibold text-[var(--brand-dark)]">
-                              {comp.opportunity}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+            {(() => {
+              const landscape = localCompetitiveLandscape ?? (hasAINarrative ? competitiveLandscape : null)
+              const hasLandscape = landscape && (landscape.summary || (landscape.competitors?.length ?? 0) > 0)
+              if (hasLandscape) {
+                return (
+                  <>
+                    <p className="text-sm leading-relaxed text-muted-foreground">
+                      {landscape.summary}
+                    </p>
+                    <div className="overflow-x-auto rounded-lg border border-border">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="bg-[var(--brand-subtle)]">
+                            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-editorial text-[var(--brand-dark)]">
+                              Competitor
+                            </th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-editorial text-[var(--brand-dark)]">
+                              Strength
+                            </th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-editorial text-[var(--brand-dark)]">
+                              Channel Approach
+                            </th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-editorial text-[var(--brand-dark)]">
+                              Status
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(landscape.competitors ?? []).map((comp, i) => (
+                            <tr
+                              key={i}
+                              className="border-t border-border transition-colors hover:bg-muted/50"
+                            >
+                              <td className="px-4 py-3 font-medium text-foreground">
+                                {comp.company}
+                              </td>
+                              <td className="px-4 py-3 text-muted-foreground">
+                                {comp.strength}
+                              </td>
+                              <td className="px-4 py-3 text-muted-foreground">
+                                {comp.channelApproach}
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className="inline-flex items-center rounded-full bg-[var(--brand-green)]/15 px-2.5 py-0.5 text-xs font-semibold text-[var(--brand-dark)]">
+                                  {comp.opportunity}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
+                )
+              }
+              return (
+                <div className="flex flex-col items-center justify-center gap-4 py-8">
+                  <Spinner className="size-8 text-[var(--brand-green)]" />
+                  <p className="text-sm text-muted-foreground">
+                    May take up to 30 seconds to load.
+                  </p>
                 </div>
-              </>
-            ) : (
-              <div className="flex flex-col items-center justify-center gap-4 py-8">
-                <Spinner className="size-8 text-[var(--brand-green)]" />
-                <p className="text-sm text-muted-foreground">
-                  This may take up to 30 seconds to load.
-                </p>
-              </div>
-            )}
+              )
+            })()}
           </CardContent>
         </Card>
 

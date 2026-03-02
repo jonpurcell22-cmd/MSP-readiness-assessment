@@ -4,12 +4,7 @@ import { sections } from "@/lib/assessment-data"
 import { getTier, getTierDescription } from "@/lib/scoring"
 import type { Tier } from "@/lib/scoring"
 import type { SectionTotals, Answers } from "@/types/assessment"
-import {
-  generateExecutiveSummary,
-  generateSectionInterpretation,
-  generateCompetitiveLandscape,
-  getMockCompetitors,
-} from "@/lib/mock-ai"
+import { generateSectionInterpretation } from "@/lib/mock-ai"
 import { calculateProjections } from "@/lib/financial-projections"
 import type { FinancialInputs } from "@/lib/financial-projections"
 import { getCostOfDelay, getDiyExpertEstimates } from "@/lib/pdf-financials"
@@ -101,18 +96,9 @@ export default async function ResultsPage({
   const assessment = rowToAssessmentData(row)
   const tier = assessment.tier
   const tierDescription = getTierDescription(tier)
-  const productCategory = (assessment.answers as Record<string, unknown>)?.product_category as string || "Technology"
 
-  // Executive summary: use stored or just-generated AI narrative
-  const executiveSummary =
-    isNarrativeOutput(narrative)
-      ? narrative.executive_summary
-      : generateExecutiveSummary(
-          assessment.company_name,
-          assessment.total_score,
-          tier,
-          assessment.section_scores as unknown as Record<string, number>
-        )
+  // Executive summary: only use AI narrative; never send mock/placeholder (client shows loading until ready)
+  const executiveSummary = isNarrativeOutput(narrative) ? narrative.executive_summary : ""
 
   // Section interpretations: use AI narrative when present, else mock
   const sectionInterpretations: Record<string, string> = {}
@@ -132,7 +118,7 @@ export default async function ResultsPage({
     }
   }
 
-  // Competitive landscape: use AI data from narrative when present
+  // Competitive landscape: only use AI data from narrative; never send mock (client shows loading until ready)
   const storedCompetitive = (narrative as Record<string, unknown> | null)?.competitive_landscape as
     | CompetitiveLandscapeOutput
     | undefined
@@ -152,10 +138,7 @@ export default async function ResultsPage({
             opportunity: c.mspRelevantWeakness,
           })),
         }
-      : {
-          summary: generateCompetitiveLandscape(productCategory, assessment.company_name),
-          competitors: getMockCompetitors(productCategory),
-        }
+      : { summary: "", competitors: [] }
 
   // Financial projections (for 3-year table)
   const financialInputs: FinancialInputs = assessment.answers?.financial || {
