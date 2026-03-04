@@ -5,7 +5,7 @@ import { rowToSubmitPayload } from "@/lib/assessment-row-payload";
 import type { Database } from "@/types/supabase";
 import type { CompetitiveLandscapeOutput } from "@/types/competitive";
 
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 type AssessmentRow = Database["public"]["Tables"]["assessments"]["Row"];
 
