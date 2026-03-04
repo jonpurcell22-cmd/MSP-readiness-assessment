@@ -39,8 +39,11 @@ export async function POST(
     }
 
     const assessmentRow = row as AssessmentRow;
+    console.log(`[generate-narrative] Starting for id=${id} company="${assessmentRow.company_name}" apiKeySet=${!!process.env.ANTHROPIC_API_KEY}`);
     const payload = rowToSubmitPayload(assessmentRow);
+    const t0 = Date.now();
     const narrative = await getNarrativeParallel(payload);
+    console.log(`[generate-narrative] getNarrativeParallel completed in ${Date.now() - t0}ms hasExecSummary=${!!narrative.executive_summary}`);
 
     const { error: updateError } = await supabase
       .from("assessments")

@@ -546,30 +546,41 @@ async function callClaudeForNarrative(
   maxTokens: number
 ): Promise<string> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error("ANTHROPIC_API_KEY not set");
+  if (!apiKey) {
+    console.error("[narrative] ANTHROPIC_API_KEY is not set");
+    throw new Error("ANTHROPIC_API_KEY not set");
+  }
+  console.log(`[narrative] Calling Claude: model=claude-sonnet-4-6 maxTokens=${maxTokens} timeout=${NARRATIVE_TIMEOUT_MS}ms`);
   const { default: Anthropic } = await import("@anthropic-ai/sdk");
   const anthropic = new Anthropic({ apiKey });
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), NARRATIVE_TIMEOUT_MS);
-  const response = await Promise.race([
-    anthropic.messages.create(
-      {
-        model: "claude-sonnet-4-6",
-        max_tokens: maxTokens,
-        system: SYSTEM_PROMPT,
-        messages: [{ role: "user", content: prompt }],
-      },
-      { signal: controller.signal, timeout: NARRATIVE_TIMEOUT_MS }
-    ),
-    new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error("Narrative generation timed out")), NARRATIVE_TIMEOUT_MS)
-    ),
-  ]);
-  clearTimeout(timeoutId);
-  const block = response.content[0];
-  const text = block?.type === "text" ? block.text : "";
-  if (!text.trim()) throw new Error("Empty Claude response");
-  return text;
+  try {
+    const response = await Promise.race([
+      anthropic.messages.create(
+        {
+          model: "claude-sonnet-4-6",
+          max_tokens: maxTokens,
+          system: SYSTEM_PROMPT,
+          messages: [{ role: "user", content: prompt }],
+        },
+        { signal: controller.signal, timeout: NARRATIVE_TIMEOUT_MS }
+      ),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("Narrative generation timed out")), NARRATIVE_TIMEOUT_MS)
+      ),
+    ]);
+    clearTimeout(timeoutId);
+    console.log(`[narrative] Claude responded: stop_reason=${response.stop_reason} content_blocks=${response.content.length}`);
+    const block = response.content[0];
+    const text = block?.type === "text" ? block.text : "";
+    if (!text.trim()) throw new Error("Empty Claude response");
+    return text;
+  } catch (err) {
+    clearTimeout(timeoutId);
+    console.error("[narrative] Claude call failed:", err instanceof Error ? `${err.name}: ${err.message}` : String(err));
+    throw err;
+  }
 }
 
 /** Part 1: Executive summary + top 3 critical gaps + top 2 strengths. */
