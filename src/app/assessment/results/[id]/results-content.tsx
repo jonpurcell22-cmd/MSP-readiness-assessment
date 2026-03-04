@@ -131,50 +131,107 @@ export function ResultsContent({
     summary: string
     competitors: CompetitorInsight[]
   } | null>(hasAINarrative ? competitiveLandscape : null)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [generationComplete, setGenerationComplete] = useState(hasAINarrative)
   const startedRef = useRef(false)
 
   useEffect(() => {
     if (hasAINarrative || !assessmentId || startedRef.current) return
     startedRef.current = true
+    setLoadError(null)
 
     let cancelled = false
     const pollInterval = 2000
-    const maxWait = 60_000
+    // Executive summary must arrive within 60s or we surface an error.
+    // Competitive landscape is fire-and-forget on the server (web search can take 60–90s),
+    // so give it a separate 120s window without blocking the exec summary display.
+    const narrativeDeadline = Date.now() + 60_000
+    const overallDeadline = Date.now() + 120_000
+    let executiveSummaryReceived = false
+    let competitiveReceived = false
 
     fetch(`/api/assessment/${assessmentId}/generate-narrative`, { method: "POST" })
-      .then(() => {
+      .then(async (res) => {
         if (cancelled) return
-        const deadline = Date.now() + maxWait
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}))
+          setLoadError(
+            (data as { error?: string }).error ||
+              "We couldn't generate your summary. Please refresh the page to try again."
+          )
+          setGenerationComplete(true)
+          return
+        }
         const poll = async () => {
-          if (cancelled || Date.now() > deadline) return
+          if (cancelled) return
+          const now = Date.now()
+
+          if (now > overallDeadline) {
+            if (!executiveSummaryReceived) {
+              setLoadError(
+                "Generation is taking longer than usual. Please refresh the page to try again."
+              )
+            }
+            setGenerationComplete(true)
+            return
+          }
+
+          if (now > narrativeDeadline && !executiveSummaryReceived) {
+            setLoadError(
+              "Generation is taking longer than usual. Please refresh the page to try again."
+            )
+            setGenerationComplete(true)
+            return
+          }
+
           try {
             const res = await fetch(`/api/assessment/${assessmentId}/narrative`)
-            if (!res.ok || cancelled) return
+            if (cancelled) return
+            if (!res.ok) {
+              const data = await res.json().catch(() => ({}))
+              setLoadError(
+                (data as { error?: string }).error ||
+                  "Something went wrong loading your results. Please refresh the page."
+              )
+              setGenerationComplete(true)
+              return
+            }
             const data = (await res.json()) as {
               executiveSummary: string | null
               competitiveLandscape: { summary: string; competitors: CompetitorInsight[] } | null
             }
-            if (data.executiveSummary != null && data.executiveSummary !== "")
+            if (data.executiveSummary != null && data.executiveSummary !== "") {
+              executiveSummaryReceived = true
               setLocalExecutiveSummary(data.executiveSummary)
+            }
             if (
               data.competitiveLandscape != null &&
-              (data.competitiveLandscape.summary || data.competitiveLandscape.competitors?.length)
-            )
+              (data.competitiveLandscape.summary || (data.competitiveLandscape.competitors?.length ?? 0) > 0)
+            ) {
+              competitiveReceived = true
               setLocalCompetitiveLandscape(data.competitiveLandscape)
-            if (
-              data.executiveSummary &&
-              data.competitiveLandscape?.competitors?.length != null &&
-              data.competitiveLandscape.competitors.length > 0
-            )
+            }
+            if (executiveSummaryReceived && competitiveReceived) {
+              setGenerationComplete(true)
               return
+            }
           } catch {
-            // ignore
+            setLoadError("Something went wrong loading your results. Please refresh the page.")
+            setGenerationComplete(true)
+            return
           }
-          if (!cancelled && Date.now() < deadline) setTimeout(poll, pollInterval)
+          if (!cancelled) setTimeout(poll, pollInterval)
         }
         setTimeout(poll, pollInterval)
       })
-      .catch(() => {})
+      .catch(() => {
+        if (!cancelled) {
+          setLoadError(
+            "We couldn't start generating your summary. Please refresh the page to try again."
+          )
+          setGenerationComplete(true)
+        }
+      })
 
     return () => {
       cancelled = true
@@ -184,13 +241,16 @@ export function ResultsContent({
   return (
     <AssessmentLayout>
       <div className="flex flex-col gap-14">
-        {!hasAINarrative &&
-          (!localExecutiveSummary ||
-            !localCompetitiveLandscape?.competitors?.length) && (
+        {!hasAINarrative && !localExecutiveSummary && !loadError && (
             <div className="animate-fade-in-up rounded-lg border border-[var(--brand-green)] bg-[var(--brand-green)]/10 px-4 py-4 text-center text-sm font-medium text-[var(--brand-dark)]">
-              Your AI executive summary and competitive analysis are being generated. May take up to 30 seconds to load.
+              Your AI executive summary is being generated. May take up to 30 seconds to load.
             </div>
           )}
+        {loadError && (
+          <div className="animate-fade-in-up rounded-lg border border-amber-200 bg-amber-50 px-4 py-4 text-center text-sm font-medium text-amber-800">
+            {loadError}
+          </div>
+        )}
         {/* Hero Section */}
         <div className="animate-fade-in-up flex flex-col items-center gap-6 pt-4 text-center">
           <div>
@@ -262,6 +322,10 @@ export function ResultsContent({
                       </p>
                     ))}
                 </div>
+              ) : loadError ? (
+                <p className="py-6 text-center text-sm text-amber-700">
+                  {loadError}
+                </p>
               ) : (
                 <div className="flex flex-col items-center justify-center gap-4 py-8">
                   <Spinner className="size-8 text-[var(--brand-green)]" />
@@ -362,11 +426,25 @@ export function ResultsContent({
                   </>
                 )
               }
+              if (loadError) {
+                return (
+                  <p className="py-6 text-center text-sm text-amber-700">
+                    {loadError}
+                  </p>
+                )
+              }
+              if (generationComplete) {
+                return (
+                  <p className="py-6 text-center text-sm text-muted-foreground">
+                    Competitive analysis is still processing. Refresh the page to check for updates.
+                  </p>
+                )
+              }
               return (
                 <div className="flex flex-col items-center justify-center gap-4 py-8">
                   <Spinner className="size-8 text-[var(--brand-green)]" />
                   <p className="text-sm text-muted-foreground">
-                    May take up to 30 seconds to load.
+                    Researching competitors — may take up to 90 seconds.
                   </p>
                 </div>
               )

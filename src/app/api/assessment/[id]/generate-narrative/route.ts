@@ -80,7 +80,6 @@ export async function POST(
                 }
               : undefined,
           }),
-          signal: AbortSignal.timeout(50_000),
         });
         if (compRes.ok) {
           const competitiveLandscape = (await compRes.json()) as CompetitiveLandscapeOutput;

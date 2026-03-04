@@ -104,7 +104,7 @@ export async function POST(request: Request) {
     const response = await Promise.race([
       anthropic.messages.create(
         {
-          model: "claude-sonnet-4-20250514",
+          model: "claude-sonnet-4-6",
           max_tokens: 3000,
           system: SYSTEM_PROMPT,
           messages: [{ role: "user", content: userPrompt }],
@@ -174,7 +174,7 @@ async function generateCompetitiveFallback(
 
 NOTE: You do NOT have web search available for this request. Base your response on your training knowledge of typical competitors and MSP channel dynamics in the vendor's product category. Be clear that this is a high-level view, not live research. Use "Based on typical market structure..." or similar framing. Still return valid JSON.`;
   const response = await anthropic.messages.create({
-    model: "claude-sonnet-4-20250514",
+    model: "claude-sonnet-4-6",
     max_tokens: 3000,
     system: FALLBACK_SYSTEM,
     messages: [{ role: "user", content: userPrompt }],

@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { isNarrativeOutput } from "@/lib/narrative";
 import type { Database } from "@/types/supabase";
 import type { CompetitiveLandscapeOutput } from "@/types/competitive";
 
@@ -36,14 +35,16 @@ export async function GET(
     }
 
     const narrative = (row as AssessmentRow).ai_narrative;
-    if (!isNarrativeOutput(narrative)) {
+    const narrativeObj = narrative && typeof narrative === "object" ? (narrative as Record<string, unknown>) : null;
+    const hasExecSummary = typeof narrativeObj?.executive_summary === "string" && narrativeObj.executive_summary.length > 0;
+    if (!narrativeObj || !hasExecSummary) {
       return NextResponse.json({
         executiveSummary: null,
         competitiveLandscape: null,
       });
     }
 
-    const storedCompetitive = (narrative as Record<string, unknown>).competitive_landscape as
+    const storedCompetitive = narrativeObj.competitive_landscape as
       | CompetitiveLandscapeOutput
       | undefined;
 
@@ -63,7 +64,7 @@ export async function GET(
         : null;
 
     return NextResponse.json({
-      executiveSummary: narrative.executive_summary,
+      executiveSummary: String(narrativeObj.executive_summary),
       competitiveLandscape,
     });
   } catch (e) {

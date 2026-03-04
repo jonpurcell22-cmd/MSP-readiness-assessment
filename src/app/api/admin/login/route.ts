@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getAdminSetCookieHeader } from "@/lib/admin-auth";
 
 export async function POST(request: Request) {
-  const password = process.env.ADMIN_PASSWORD;
+  const password = process.env.ADMIN_PASSWORD?.trim();
   if (!password) {
     return NextResponse.json({ error: "Admin not configured" }, { status: 503 });
   }
