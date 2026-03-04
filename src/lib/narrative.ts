@@ -536,7 +536,7 @@ export function generateFallbackNarrative(payload: {
   };
 }
 
-const NARRATIVE_TIMEOUT_MS = 45_000;
+const NARRATIVE_TIMEOUT_MS = 90_000;
 
 type PayloadForNarrative = Parameters<typeof payloadToNarrativeInput>[0];
 
