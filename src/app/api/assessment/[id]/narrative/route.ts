@@ -36,8 +36,11 @@ export async function GET(
 
     const narrative = (row as AssessmentRow).ai_narrative;
     const narrativeObj = narrative && typeof narrative === "object" ? (narrative as Record<string, unknown>) : null;
-    const hasExecSummary = typeof narrativeObj?.executive_summary === "string" && narrativeObj.executive_summary.length > 0;
-    if (!narrativeObj || !hasExecSummary) {
+    // Only surface content that was genuinely AI-generated (ai_generated flag set by getNarrativeParallel).
+    // This prevents old fallback content saved before this fix from being shown as AI output.
+    const hasAIContent = narrativeObj?.ai_generated === true &&
+      typeof narrativeObj?.executive_summary === "string" && narrativeObj.executive_summary.length > 0;
+    if (!hasAIContent) {
       return NextResponse.json({
         executiveSummary: null,
         competitiveLandscape: null,

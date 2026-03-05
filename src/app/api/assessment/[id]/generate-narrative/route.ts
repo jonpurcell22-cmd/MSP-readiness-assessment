@@ -43,7 +43,15 @@ export async function POST(
     const payload = rowToSubmitPayload(assessmentRow);
     const t0 = Date.now();
     const narrative = await getNarrativeParallel(payload);
-    console.log(`[generate-narrative] getNarrativeParallel completed in ${Date.now() - t0}ms hasExecSummary=${!!narrative.executive_summary}`);
+    const elapsed = Date.now() - t0;
+    console.log(`[generate-narrative] getNarrativeParallel completed in ${elapsed}ms ai_generated=${!!narrative.ai_generated}`);
+
+    if (!narrative.ai_generated) {
+      // Claude failed — do not save fallback content to DB. Leave ai_narrative as null so the
+      // next page load triggers a fresh generation attempt.
+      console.warn("[generate-narrative] Narrative is fallback (Claude failed), skipping DB save so page will retry.");
+      return NextResponse.json({ ok: true, fallback: true });
+    }
 
     const { error: updateError } = await supabase
       .from("assessments")
