@@ -4,6 +4,9 @@ import './globals.css'
 export const metadata: Metadata = {
   title: 'MSP Channel Readiness Assessment | Untapped Channel Strategy',
   description: 'Evaluate your readiness to build a profitable MSP channel program. Get a personalized scorecard, competitive analysis, and financial projections.',
+  verification: {
+    google: 'J_vJM_47xfzNlD-ZEeKHiGFkgbymd3hCYJf6dc8-EzM',
+  },
 }
 
 export const viewport: Viewport = {

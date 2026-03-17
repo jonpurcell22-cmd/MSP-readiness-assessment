@@ -187,7 +187,7 @@ EXAMPLE of what NOT to do vs what TO do:
 - BAD (generic): "Product Architecture shows areas for improvement. Consider focusing on key dimensions to strengthen your MSP readiness."
 - GOOD (answer-specific): "You scored 2 on Multi-Tenant Management and 1 on Automated Provisioning. MSPs run one instance per end customer; without both, you are asking them to manage per-tenant setups, which increases their cost to deliver and erodes margin. Fix multi-tenant and provisioning before recruiting partners."
 
-You will receive the full assessment data and must return ONLY valid JSON matching the specified output format (no markdown, no preamble).`;
+You will receive the full assessment data and must return ONLY valid JSON matching the specified output format. Do NOT wrap the JSON in markdown code fences (no \`\`\`json, no \`\`\`, no backticks of any kind). Do not include any preamble, explanation, or text before or after the JSON object. Your entire response must be a single raw JSON object starting with { and ending with }.`;
 
 function formatSectionScores(
   sectionNum: number,
@@ -309,7 +309,7 @@ Return ONLY valid JSON (no markdown, no backticks, no preamble):
 Every item must cite specific questions and scores. No generic phrases.`;
 }
 
-/** Part 2 prompt: section interpretations — answer-specific, no generic template language. */
+/** Part 2 prompt: section interpretations — specific to actual scores, 60-80 words per section. */
 export function buildNarrativePromptPart2(data: NarrativeInput): string {
   const context = narrativeContextBlock(data);
   const sectionList = data.section7Skipped
@@ -317,34 +317,32 @@ export function buildNarrativePromptPart2(data: NarrativeInput): string {
     : "1 through 7";
   return `${context}
 
-Your job: For each section, write a 2-3 sentence interpretation and one concrete recommendation. Every sentence MUST be specific to this vendor's actual answers. No generic filler.
+Your job: Write 3-4 sentences per section (60-80 words for interpretation + recommendation combined) that read like a human expert reviewed the actual scores. Every sentence must be derived from the specific question scores above — never generic filler.
 
-For EACH section you MUST:
-1. Name the specific question(s) where they scored LOWEST (use the exact question names from the data, e.g. "Billing & Invoicing Flexibility", "Multi-Tenant Management") and state the score (e.g. "2/5"). Explain the operational impact of those gaps on MSP partner experience — what breaks for the MSP in practice (margin, billing, onboarding, conflict, etc.).
-2. Name the specific question(s) where they scored HIGHEST in that section (by name) and acknowledge the strength in concrete terms.
-3. Connect the section to their product category (${data.productCategory}) and company context where relevant.
+REQUIRED structure for each section:
+1. Open with the section score and what it signals: "A [X]/25 on [Section Name] means..." — make the implication concrete for an MSP, not abstract.
+2. Name the 1-2 weakest questions by their exact name and score (e.g. "Billing & Invoicing Flexibility at 1/5, Margin Viability at 2/5") and state the direct MSP consequence in plain terms — what breaks for the partner in practice.
+3. Acknowledge the strongest question if it scores 4-5, by name and score. Skip this beat entirely if no question scores 4+.
+4. Recommendation: one concrete action that directly addresses the named gaps. Name the specific question or capability to fix. 15-20 words max.
 
-EXAMPLE of what TO write (answer-specific, operational):
-"Your margins at 35%+ are strong enough to attract MSP interest, but the lack of monthly per-unit billing and aggregate invoicing will stop most MSP conversations before they start. MSPs in cybersecurity expect to add seats mid-month and bill monthly. Until billing flexibility catches up to your margin story, partners will evaluate but won't commit."
+CALIBRATION EXAMPLE — this is the target length and specificity:
+interpretation: "A 14/25 on Pricing & Partner Economics means the margin story exists but the billing model will end most conversations early. Billing & Invoicing Flexibility at 1/5 is the hard blocker — MSPs in cybersecurity add seats mid-month and expect aggregate invoices; your current per-seat annual model forces manual work on their side. Partner Margin Viability at 4/5 gives you something real to lead with."
+recommendation: "Prioritize monthly per-unit billing and aggregate invoicing before your first partner conversation."
 
-BANNED — never use these or any similar generic phrases:
-- "Solid foundation, but MSPs will compare you to vendors who have nailed this"
-- "That is a blocker; no amount of partner recruitment will overcome it until it is fixed"
-- "That is a competitive advantage; MSPs will notice"
-- "Leverage this strength in partner recruitment and positioning"
-- "Identify the top two gaps in this dimension and address them before launch"
-- "Prioritize product, pricing, or operational changes in this area before scaling the channel"
-- "Room to improve" / "areas for improvement" / "key areas to focus on"
+BANNED — delete and rewrite any sentence that:
+- Could apply to a vendor with different scores ("consider focusing on key dimensions", "there are areas to improve", "solid foundation with room to grow")
+- Does not name a specific question from the data
+- Uses: "areas for improvement", "key areas to focus on", "solid foundation", "leverage this strength", "room to grow", "it is important to consider", "various aspects"
 
-Return ONLY valid JSON (no markdown, no backticks, no preamble). Include one object in section_interpretations for sections ${sectionList}. Use exact section_name: "MSP-Ready Product Architecture", "Pricing & Partner Economics", "Organizational & GTM Readiness", "Partner Ecosystem & Recruitment", "Enablement & Partner Experience", "Competitive & Distribution Landscape", "Existing MSP Channel Health" (only include section 7 if Section 7 Skipped is false).
+Return ONLY valid JSON (no markdown, no backticks, no preamble). Include one object per section for sections ${sectionList}. Use exact section_name values: "MSP-Ready Product Architecture", "Pricing & Partner Economics", "Organizational & GTM Readiness", "Partner Ecosystem & Recruitment", "Enablement & Partner Experience", "Competitive & Distribution Landscape", "Existing MSP Channel Health" (section 7 only if Section 7 Skipped is false).
 
 {
   "section_interpretations": [
     {
       "section_number": 1,
       "section_name": "MSP-Ready Product Architecture",
-      "interpretation": "2-3 sentences. Name their lowest-scored question(s) in this section by name and score; explain operational impact on MSPs. Name their highest-scored question(s) and the strength. Tie to their product category where relevant.",
-      "recommendation": "One concrete action tied to the specific gaps you named, not a generic line."
+      "interpretation": "3 sentences. Sentence 1: score + concrete MSP implication. Sentence 2: name the 1-2 weakest questions by name and score, state the MSP consequence. Sentence 3 (optional): name the strongest question if 4+ and what it enables.",
+      "recommendation": "One concrete fix naming the specific question or capability to address. 15-20 words."
     }
   ]
 }`;
@@ -543,6 +541,29 @@ const NARRATIVE_TIMEOUT_MS = 90_000;
 
 type PayloadForNarrative = Parameters<typeof payloadToNarrativeInput>[0];
 
+/** Strip markdown code fences Claude sometimes wraps JSON in despite instructions. */
+function stripCodeFences(text: string): string {
+  const trimmed = text.trim();
+  // Match ```json ... ``` or ``` ... ```
+  const fenced = trimmed.match(/^```(?:json)?\s*\n?([\s\S]*?)\n?```\s*$/);
+  if (fenced) return fenced[1].trim();
+  return trimmed;
+}
+
+/**
+ * Verify the JSON string is structurally complete (ends with } or ]) before
+ * parsing. Truncated responses from hitting maxTokens produce confusing
+ * "Unterminated string" SyntaxErrors; this throws a clear diagnostic instead.
+ */
+function assertCompleteJson(text: string, label: string): void {
+  const trimmed = text.trim();
+  if (!trimmed.endsWith("}") && !trimmed.endsWith("]")) {
+    const tail = trimmed.slice(-120);
+    console.error(`[narrative] ${label} response appears truncated (${trimmed.length} chars). Tail: ...${tail}`);
+    throw new Error(`${label} response truncated at ${trimmed.length} chars — increase maxTokens`);
+  }
+}
+
 /** Call Claude with prompt; throws on failure. */
 async function callClaudeForNarrative(
   prompt: string,
@@ -556,40 +577,30 @@ async function callClaudeForNarrative(
   console.log(`[narrative] Calling Claude: model=claude-sonnet-4-6 maxTokens=${maxTokens} timeout=${NARRATIVE_TIMEOUT_MS}ms`);
   const { default: Anthropic } = await import("@anthropic-ai/sdk");
   const anthropic = new Anthropic({ apiKey });
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), NARRATIVE_TIMEOUT_MS);
-  try {
-    const response = await Promise.race([
-      anthropic.messages.create(
-        {
-          model: "claude-sonnet-4-6",
-          max_tokens: maxTokens,
-          system: SYSTEM_PROMPT,
-          messages: [{ role: "user", content: prompt }],
-        },
-        { signal: controller.signal, timeout: NARRATIVE_TIMEOUT_MS }
-      ),
-      new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("Narrative generation timed out")), NARRATIVE_TIMEOUT_MS)
-      ),
-    ]);
-    clearTimeout(timeoutId);
-    console.log(`[narrative] Claude responded: stop_reason=${response.stop_reason} content_blocks=${response.content.length}`);
-    const block = response.content[0];
-    const text = block?.type === "text" ? block.text : "";
-    if (!text.trim()) throw new Error("Empty Claude response");
-    return text;
-  } catch (err) {
-    clearTimeout(timeoutId);
-    console.error("[narrative] Claude call failed:", err instanceof Error ? `${err.name}: ${err.message}` : String(err));
-    throw err;
-  }
+  // Use only the SDK's built-in timeout — avoids the AbortController double-abort
+  // pattern that causes "TypeError: fetch failed" when the signal fires mid-request.
+  const response = await anthropic.messages.create(
+    {
+      model: "claude-sonnet-4-6",
+      max_tokens: maxTokens,
+      system: SYSTEM_PROMPT,
+      messages: [{ role: "user", content: prompt }],
+    },
+    { timeout: NARRATIVE_TIMEOUT_MS }
+  );
+  console.log(`[narrative] Claude responded: stop_reason=${response.stop_reason} content_blocks=${response.content.length}`);
+  const block = response.content[0];
+  const raw = block?.type === "text" ? block.text : "";
+  if (!raw.trim()) throw new Error("Empty Claude response");
+  const text = stripCodeFences(raw);
+  return text;
 }
 
 /** Part 1: Executive summary + top 3 critical gaps + top 2 strengths. Throws on failure (no internal fallback). */
 export async function getNarrativePart1(payload: PayloadForNarrative): Promise<NarrativePart1> {
   const data = payloadToNarrativeInput(payload);
-  const text = await callClaudeForNarrative(buildNarrativePromptPart1(data), 1200);
+  const text = await callClaudeForNarrative(buildNarrativePromptPart1(data), 2000);
+  assertCompleteJson(text, "Part1");
   const parsed = JSON.parse(text) as NarrativePart1;
   if (
     typeof parsed.executive_summary !== "string" ||
@@ -605,7 +616,8 @@ export async function getNarrativePart1(payload: PayloadForNarrative): Promise<N
 export async function getNarrativePart2(payload: PayloadForNarrative): Promise<NarrativePart2> {
   const data = payloadToNarrativeInput(payload);
   try {
-    const text = await callClaudeForNarrative(buildNarrativePromptPart2(data), 2800);
+    const text = await callClaudeForNarrative(buildNarrativePromptPart2(data), 4000);
+    assertCompleteJson(text, "Part2");
     const parsed = JSON.parse(text) as NarrativePart2;
     if (!Array.isArray(parsed.section_interpretations)) throw new Error("Invalid part 2 structure");
     return parsed;
@@ -619,7 +631,8 @@ export async function getNarrativePart2(payload: PayloadForNarrative): Promise<N
 export async function getNarrativePart3(payload: PayloadForNarrative): Promise<NarrativePart3> {
   const data = payloadToNarrativeInput(payload);
   try {
-    const text = await callClaudeForNarrative(buildNarrativePromptPart3(data), 800);
+    const text = await callClaudeForNarrative(buildNarrativePromptPart3(data), 1500);
+    assertCompleteJson(text, "Part3");
     const parsed = JSON.parse(text) as NarrativePart3;
     if (
       typeof parsed.financial_commentary !== "string" ||
@@ -668,27 +681,26 @@ export async function getNarrative(payload: PayloadForNarrative): Promise<Narrat
  * Generate narrative by running parts 1–3 in parallel (~3x faster than single getNarrative).
  * Used by results-page background generation.
  */
+/**
+ * Throws if ANTHROPIC_API_KEY is missing or if any Claude call fails.
+ * Callers are responsible for handling the error — no internal fallback.
+ * This ensures the actual error propagates to logs and SSE response.
+ */
 export async function getNarrativeParallel(payload: PayloadForNarrative): Promise<NarrativeOutput> {
   if (!process.env.ANTHROPIC_API_KEY) {
-    console.error("[narrative] ANTHROPIC_API_KEY not set, cannot generate AI narrative");
-    return generateFallbackNarrative(payload);
+    throw new Error("ANTHROPIC_API_KEY is not set");
   }
-  try {
-    const [part1, part2, part3] = await Promise.all([
-      getNarrativePart1(payload),
-      getNarrativePart2(payload),
-      getNarrativePart3(payload),
-    ]);
-    return {
-      executive_summary: part1.executive_summary,
-      section_interpretations: part2.section_interpretations,
-      financial_commentary: part3.financial_commentary,
-      cost_of_delay_narrative: part3.cost_of_delay_narrative,
-      roadmap_narrative: part3.roadmap_narrative,
-      ai_generated: true,
-    };
-  } catch (err) {
-    console.error("[narrative] getNarrativeParallel failed (part 1 threw), returning fallback:", err instanceof Error ? err.message : String(err));
-    return generateFallbackNarrative(payload);
-  }
+  const [part1, part2, part3] = await Promise.all([
+    getNarrativePart1(payload),
+    getNarrativePart2(payload),
+    getNarrativePart3(payload),
+  ]);
+  return {
+    executive_summary: part1.executive_summary,
+    section_interpretations: part2.section_interpretations,
+    financial_commentary: part3.financial_commentary,
+    cost_of_delay_narrative: part3.cost_of_delay_narrative,
+    roadmap_narrative: part3.roadmap_narrative,
+    ai_generated: true,
+  };
 }

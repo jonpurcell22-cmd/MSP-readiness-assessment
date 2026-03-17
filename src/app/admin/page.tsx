@@ -1,9 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
-import { Header } from "@/components/header"
-import { Footer } from "@/components/footer"
-import { TierBadge } from "@/components/tier-badge"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -14,63 +11,133 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { ScoreBar } from "@/components/score-bar"
-import { sections } from "@/lib/assessment-data"
-import { toPercentageScore } from "@/lib/scoring"
 import {
   Lock,
-  Download,
   Users,
-  TrendingUp,
-  BarChart3,
   Calendar,
+  CheckCircle2,
   ExternalLink,
-  ArrowUpDown,
+  ChevronUp,
+  ChevronDown,
+  Trash2,
+  AlertTriangle,
 } from "lucide-react"
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 interface Assessment {
   id: string
+  full_name: string
   company_name: string
-  contact_name: string
   title: string | null
   email: string
-  phone: string | null
-  total_score: number | null
-  tier: string | null
-  section_scores: Record<string, number> | null
-  answers: Record<string, unknown> | null
+  path: string | null
+  path_label: string | null
+  ai_output: string | null
   completed_at: string | null
   created_at: string
 }
 
+type SortField = "created_at" | "full_name" | "company_name" | "path"
+type SortDir = "asc" | "desc"
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const KNOWN_PATHS = new Set(["Starting from Scratch", "Not Producing Revenue", "Producing but Broken"])
+
+const PATH_STYLES: Record<string, { bg: string; text: string; border: string }> = {
+  "Starting from Scratch":  { bg: "#EFF6FF", text: "#1D4ED8", border: "#BFDBFE" },
+  "Not Producing Revenue":  { bg: "#FEFCE8", text: "#A16207", border: "#FDE68A" },
+  "Producing but Broken":   { bg: "#FFF1F2", text: "#BE123C", border: "#FECDD3" },
+}
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+function PathBadge({ label }: { label: string | null }) {
+  if (!label) return <span style={{ color: "#999", fontSize: 13 }}>—</span>
+
+  if (!KNOWN_PATHS.has(label)) {
+    return (
+      <span style={{
+        display: "inline-flex", alignItems: "center",
+        background: "#F3F4F6", color: "#6B7280", border: "1px solid #E5E7EB",
+        borderRadius: 999, padding: "2px 10px", fontSize: 12, fontWeight: 500,
+      }}>
+        Legacy
+      </span>
+    )
+  }
+
+  const s = PATH_STYLES[label]
+  return (
+    <span style={{
+      display: "inline-flex", alignItems: "center",
+      background: s.bg, color: s.text, border: `1px solid ${s.border}`,
+      borderRadius: 999, padding: "2px 10px", fontSize: 12, fontWeight: 500,
+      whiteSpace: "nowrap",
+    }}>
+      {label}
+    </span>
+  )
+}
+
+function SortIcon({ field, sortField, sortDir }: { field: string; sortField: string; sortDir: SortDir }) {
+  const active = field === sortField
+  if (!active) return <ChevronUp style={{ width: 12, height: 12, opacity: 0.3 }} />
+  return sortDir === "asc"
+    ? <ChevronUp  style={{ width: 12, height: 12, color: "#4cf37b" }} />
+    : <ChevronDown style={{ width: 12, height: 12, color: "#4cf37b" }} />
+}
+
+function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: number }) {
+  return (
+    <Card style={{ border: "1px solid #E5E7EB", background: "#fff", borderRadius: 10 }}>
+      <CardContent style={{ display: "flex", alignItems: "center", gap: 14, padding: "20px 20px" }}>
+        <div style={{
+          width: 38, height: 38, borderRadius: 8, flexShrink: 0,
+          background: "#F0FDF4", display: "flex", alignItems: "center", justifyContent: "center",
+        }}>
+          {icon}
+        </div>
+        <div>
+          <p style={{ fontSize: 11, color: "#9CA3AF", margin: 0, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.05em" }}>{label}</p>
+          <p style={{ fontSize: 26, fontWeight: 700, color: "#333", margin: 0, lineHeight: 1.2 }}>{value}</p>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+// ─── Main page ────────────────────────────────────────────────────────────────
+
 export default function AdminPage() {
-  const [authToken, setAuthToken] = useState<string | null>(null)
+  const [authenticated, setAuthenticated] = useState(false)
   const [password, setPassword] = useState("")
   const [loginError, setLoginError] = useState("")
   const [loggingIn, setLoggingIn] = useState(false)
 
   const [assessments, setAssessments] = useState<Assessment[]>([])
   const [loading, setLoading] = useState(false)
-  const [selectedAssessment, setSelectedAssessment] =
-    useState<Assessment | null>(null)
-  const [sortField, setSortField] = useState<string>("created_at")
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc")
+  const [selected, setSelected] = useState<Assessment | null>(null)
 
-  const authenticated = !!authToken
+  const [sortField, setSortField] = useState<SortField>("created_at")
+  const [sortDir, setSortDir] = useState<SortDir>("desc")
 
-  const fetchAssessments = useCallback(async (token: string) => {
+  const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set())
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+
+  const selectAllRef = useRef<HTMLInputElement>(null)
+
+  const fetchAssessments = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetch("/api/admin/assessments", {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      if (res.status === 401) {
-        setAuthToken(null)
-        return
-      }
+      const res = await fetch("/api/admin/assessments")
+      if (res.status === 401) { setAuthenticated(false); return }
       if (res.ok) {
         const data = await res.json()
         setAssessments(data)
+        setCheckedIds(new Set())
       }
     } finally {
       setLoading(false)
@@ -78,28 +145,32 @@ export default function AdminPage() {
   }, [])
 
   useEffect(() => {
-    if (authToken) {
-      fetchAssessments(authToken)
-    }
-  }, [authToken, fetchAssessments])
+    if (authenticated) fetchAssessments()
+  }, [authenticated, fetchAssessments])
+
+  // Keep indeterminate state on select-all checkbox
+  useEffect(() => {
+    const el = selectAllRef.current
+    if (!el) return
+    const allIds = sorted.map((a) => a.id)
+    const checkedCount = allIds.filter((id) => checkedIds.has(id)).length
+    el.indeterminate = checkedCount > 0 && checkedCount < allIds.length
+  })
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
     setLoggingIn(true)
     setLoginError("")
-
     try {
       const res = await fetch("/api/admin/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password }),
       })
-
-      const data = await res.json()
-
-      if (res.ok && data.token) {
-        setAuthToken(data.token)
+      if (res.ok) {
+        setAuthenticated(true)
       } else {
+        const data = await res.json()
         setLoginError(data.error || "Invalid password")
       }
     } catch {
@@ -109,7 +180,7 @@ export default function AdminPage() {
     }
   }
 
-  function handleSort(field: string) {
+  function handleSort(field: SortField) {
     if (sortField === field) {
       setSortDir(sortDir === "asc" ? "desc" : "asc")
     } else {
@@ -118,448 +189,433 @@ export default function AdminPage() {
     }
   }
 
-  const sortedAssessments = [...assessments].sort((a, b) => {
-    let aVal: string | number | null = null
-    let bVal: string | number | null = null
+  function toggleCheck(id: string) {
+    setCheckedIds((prev) => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
 
-    switch (sortField) {
-      case "created_at":
-        aVal = a.created_at
-        bVal = b.created_at
-        break
-      case "company_name":
-        aVal = a.company_name?.toLowerCase() || ""
-        bVal = b.company_name?.toLowerCase() || ""
-        break
-      case "total_score":
-        aVal = a.total_score || 0
-        bVal = b.total_score || 0
-        break
-      case "tier":
-        aVal = a.tier || ""
-        bVal = b.tier || ""
-        break
-      default:
-        return 0
+  function toggleSelectAll() {
+    const allIds = sorted.map((a) => a.id)
+    const allChecked = allIds.every((id) => checkedIds.has(id))
+    if (allChecked) {
+      setCheckedIds(new Set())
+    } else {
+      setCheckedIds(new Set(allIds))
     }
+  }
 
-    if (aVal === null || bVal === null) return 0
-    if (aVal < bVal) return sortDir === "asc" ? -1 : 1
-    if (aVal > bVal) return sortDir === "asc" ? 1 : -1
+  async function handleDeleteConfirmed() {
+    setDeleting(true)
+    try {
+      const res = await fetch("/api/admin/assessments", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: Array.from(checkedIds) }),
+      })
+      if (res.ok) {
+        setShowDeleteConfirm(false)
+        await fetchAssessments()
+      }
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  const completed = assessments.filter((a) => a.completed_at)
+  const thisWeek = new Date(); thisWeek.setDate(thisWeek.getDate() - 7)
+  const weekCount = assessments.filter((a) => new Date(a.created_at) >= thisWeek).length
+
+  const sorted = [...assessments].sort((a, b) => {
+    const get = (x: Assessment): string => {
+      if (sortField === "created_at") return x.created_at
+      if (sortField === "full_name") return x.full_name?.toLowerCase() ?? ""
+      if (sortField === "company_name") return x.company_name?.toLowerCase() ?? ""
+      if (sortField === "path") return x.path_label?.toLowerCase() ?? ""
+      return ""
+    }
+    const av = get(a), bv = get(b)
+    if (av < bv) return sortDir === "asc" ? -1 : 1
+    if (av > bv) return sortDir === "asc" ? 1 : -1
     return 0
   })
 
-  // Stats
-  const completedAssessments = assessments.filter((a) => a.completed_at)
-  const avgScore =
-    completedAssessments.length > 0
-      ? Math.round(
-          completedAssessments.reduce(
-            (s, a) => s + toPercentageScore(a.total_score || 0),
-            0
-          ) / completedAssessments.length
-        )
-      : 0
+  const allChecked = sorted.length > 0 && sorted.every((a) => checkedIds.has(a.id))
 
-  const tierCounts: Record<string, number> = {}
-  completedAssessments.forEach((a) => {
-    if (a.tier) tierCounts[a.tier] = (tierCounts[a.tier] || 0) + 1
-  })
-  const mostCommonTier =
-    Object.entries(tierCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || "N/A"
-
-  const thisWeek = new Date()
-  thisWeek.setDate(thisWeek.getDate() - 7)
-  const weekCount = assessments.filter(
-    (a) => new Date(a.created_at) >= thisWeek
-  ).length
-
-  // Password gate
+  // ── Login gate ──────────────────────────────────────────────────────────────
   if (!authenticated) {
     return (
-      <div className="flex min-h-screen flex-col bg-background">
-        <Header />
-        <main className="flex flex-1 items-center justify-center px-6">
-          <Card className="w-full max-w-[400px] border-border">
-            <CardHeader className="text-center">
-              <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-[var(--brand-subtle)]">
-                <Lock className="h-5 w-5 text-[var(--brand-dark)]" />
+      <div style={{ minHeight: "100vh", background: "#F9FAFB", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+        <Card style={{ width: "100%", maxWidth: 360, border: "1px solid #E5E7EB", borderRadius: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+          <CardHeader style={{ textAlign: "center", paddingBottom: 8 }}>
+            <div style={{
+              width: 44, height: 44, borderRadius: 10, background: "#333",
+              display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px",
+            }}>
+              <Lock style={{ width: 20, height: 20, color: "#4cf37b" }} />
+            </div>
+            <CardTitle style={{ fontSize: 17, fontWeight: 700, color: "#333" }}>Admin Dashboard</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                <Label htmlFor="password" style={{ fontSize: 13, color: "#555" }}>Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter admin password"
+                  autoFocus
+                  required
+                />
               </div>
-              <CardTitle className="text-lg text-[var(--brand-dark)]">
-                Admin Dashboard
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleLogin} className="flex flex-col gap-4">
-                <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="password">Password</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter admin password"
-                    required
-                  />
-                </div>
-                {loginError && (
-                  <p className="text-sm text-destructive">{loginError}</p>
-                )}
-                <Button
-                  type="submit"
-                  disabled={loggingIn}
-                  className="bg-[var(--brand-green)] text-[var(--brand-dark)] hover:bg-[var(--brand-green)]/90 font-semibold"
-                >
-                  {loggingIn ? "Logging in..." : "Log In"}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-        </main>
-        <Footer />
+              {loginError && <p style={{ fontSize: 13, color: "#DC2626", margin: 0 }}>{loginError}</p>}
+              <Button
+                type="submit"
+                disabled={loggingIn}
+                style={{ background: "#4cf37b", color: "#333", fontWeight: 700, border: "none" }}
+              >
+                {loggingIn ? "Logging in…" : "Log In"}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
       </div>
     )
   }
 
+  // ── Dashboard ───────────────────────────────────────────────────────────────
   return (
-    <div className="flex min-h-screen flex-col bg-background">
-      <Header
-        rightContent={
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={async () => {
-                if (!authToken) return
-                const res = await fetch("/api/admin/test-pdf")
-                if (res.ok) {
-                  const blob = await res.blob()
-                  const url = URL.createObjectURL(blob)
-                  const a = document.createElement("a")
-                  a.href = url
-                  const disposition = res.headers.get("Content-Disposition")
-                  const match = disposition?.match(/filename="?([^";]+)"?/)
-                  a.download = match?.[1] ?? "MSP-Readiness-TEST.pdf"
-                  a.click()
-                  URL.revokeObjectURL(url)
-                }
-              }}
-            >
-              Test PDF
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={async () => {
-                if (!authToken) return
-                const res = await fetch("/api/admin/export", {
-                  headers: { Authorization: `Bearer ${authToken}` },
-                })
-                if (res.ok) {
-                  const blob = await res.blob()
-                  const url = URL.createObjectURL(blob)
-                  const a = document.createElement("a")
-                  a.href = url
-                  a.download = `assessments-${new Date().toISOString().split("T")[0]}.csv`
-                  a.click()
-                  URL.revokeObjectURL(url)
-                }
-              }}
-            >
-              <Download className="mr-1 h-4 w-4" />
-              Export CSV
-            </Button>
+    <div style={{ minHeight: "100vh", background: "#F9FAFB" }}>
+      {/* Top bar */}
+      <div style={{ background: "#333", borderBottom: "1px solid #444", padding: "0 24px" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", height: 56 }}>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: "#4cf37b", letterSpacing: "0.04em", textTransform: "uppercase" }}>
+              Untapped Channel Strategy
+            </span>
+            <span style={{ color: "#666", fontSize: 13 }}>/</span>
+            <span style={{ fontSize: 14, fontWeight: 600, color: "#fff" }}>Assessment Dashboard</span>
           </div>
-        }
-      />
-      <main className="mx-auto w-full max-w-[1100px] flex-1 px-6 py-8">
-        {/* Stats Cards */}
-        <div className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <Card className="border-border">
-            <CardContent className="flex flex-col gap-1 py-4">
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Users className="h-4 w-4" />
-                <span className="text-xs">Total Assessments</span>
-              </div>
-              <p className="text-2xl font-bold text-[var(--brand-dark)]">
-                {assessments.length}
-              </p>
-            </CardContent>
-          </Card>
-          <Card className="border-border">
-            <CardContent className="flex flex-col gap-1 py-4">
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <TrendingUp className="h-4 w-4" />
-                <span className="text-xs">Average Score</span>
-              </div>
-              <p className="text-2xl font-bold text-[var(--brand-dark)]">
-                {avgScore}/100
-              </p>
-            </CardContent>
-          </Card>
-          <Card className="border-border">
-            <CardContent className="flex flex-col gap-1 py-4">
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <BarChart3 className="h-4 w-4" />
-                <span className="text-xs">Most Common Tier</span>
-              </div>
-              <p className="text-lg font-bold text-[var(--brand-dark)]">
-                {mostCommonTier}
-              </p>
-            </CardContent>
-          </Card>
-          <Card className="border-border">
-            <CardContent className="flex flex-col gap-1 py-4">
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Calendar className="h-4 w-4" />
-                <span className="text-xs">This Week</span>
-              </div>
-              <p className="text-2xl font-bold text-[var(--brand-dark)]">
-                {weekCount}
-              </p>
-            </CardContent>
-          </Card>
+          <button
+            onClick={async () => {
+              await fetch("/api/admin/logout", { method: "POST" })
+              setAuthenticated(false)
+            }}
+            style={{ fontSize: 13, color: "#999", background: "none", border: "none", cursor: "pointer", padding: "4px 0" }}
+          >
+            Log out
+          </button>
+        </div>
+      </div>
+
+      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "32px 24px" }}>
+        {/* Stats */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 28 }}>
+          <StatCard
+            icon={<Users style={{ width: 18, height: 18, color: "#333" }} />}
+            label="Total Leads"
+            value={assessments.length}
+          />
+          <StatCard
+            icon={<CheckCircle2 style={{ width: 18, height: 18, color: "#333" }} />}
+            label="Completed"
+            value={completed.length}
+          />
+          <StatCard
+            icon={<Calendar style={{ width: 18, height: 18, color: "#333" }} />}
+            label="This Week"
+            value={weekCount}
+          />
         </div>
 
-        {/* Data Table */}
-        <Card className="border-border">
-          <CardHeader>
-            <CardTitle className="text-lg text-[var(--brand-dark)]">
-              All Assessments
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="flex flex-col gap-3">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className="h-12 animate-pulse rounded bg-muted"
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-border">
-                      {[
-                        { key: "created_at", label: "Date" },
+        {/* Table card */}
+        <div style={{ background: "#fff", border: "1px solid #E5E7EB", borderRadius: 10, overflow: "hidden" }}>
+          {/* Card header */}
+          <div style={{ padding: "16px 20px", borderBottom: "1px solid #F3F4F6", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <span style={{ fontSize: 15, fontWeight: 700, color: "#333" }}>All Assessments</span>
+            {checkedIds.size > 0 && (
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                style={{
+                  display: "flex", alignItems: "center", gap: 6,
+                  background: "#FEF2F2", color: "#DC2626", border: "1px solid #FECACA",
+                  borderRadius: 6, padding: "6px 12px", fontSize: 13, fontWeight: 600, cursor: "pointer",
+                }}
+              >
+                <Trash2 style={{ width: 14, height: 14 }} />
+                Delete {checkedIds.size} selected
+              </button>
+            )}
+          </div>
+
+          {loading ? (
+            <div style={{ padding: 32, display: "flex", flexDirection: "column", gap: 8 }}>
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} style={{ height: 44, borderRadius: 6, background: "#F3F4F6", animation: "pulse 1.5s infinite" }} />
+              ))}
+            </div>
+          ) : (
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                <thead>
+                  <tr style={{ background: "#FAFAFA", borderBottom: "1px solid #F3F4F6" }}>
+                    {/* Select all */}
+                    <th style={{ width: 44, padding: "10px 0 10px 16px", textAlign: "center" }}>
+                      <input
+                        ref={selectAllRef}
+                        type="checkbox"
+                        checked={allChecked}
+                        onChange={toggleSelectAll}
+                        style={{ width: 15, height: 15, accentColor: "#4cf37b", cursor: "pointer" }}
+                      />
+                    </th>
+                    {(
+                      [
+                        { key: "created_at",   label: "Date" },
+                        { key: "full_name",    label: "Name" },
                         { key: "company_name", label: "Company" },
-                        { key: "contact_name", label: "Contact" },
-                        { key: "title", label: "Title" },
-                        { key: "email", label: "Email" },
-                        { key: "product_category", label: "Category" },
-                        { key: "total_score", label: "Score" },
-                        { key: "tier", label: "Tier" },
-                      ].map((col) => (
-                        <th
-                          key={col.key}
-                          className="cursor-pointer pb-3 pr-4 text-left font-semibold text-[var(--brand-dark)] hover:text-[var(--brand-green)]"
-                          onClick={() => handleSort(col.key)}
-                        >
-                          <span className="flex items-center gap-1">
-                            {col.label}
-                            <ArrowUpDown className="h-3 w-3" />
-                          </span>
-                        </th>
-                      ))}
-                      <th className="pb-3 text-left font-semibold text-[var(--brand-dark)]">
-                        Actions
+                        { key: null,           label: "Title" },
+                        { key: null,           label: "Email" },
+                        { key: "path",         label: "Path" },
+                        { key: null,           label: "Status" },
+                        { key: null,           label: "" },
+                      ] as { key: SortField | null; label: string }[]
+                    ).map((col, i) => (
+                      <th
+                        key={i}
+                        onClick={col.key ? () => handleSort(col.key as SortField) : undefined}
+                        style={{
+                          padding: "10px 14px", textAlign: "left",
+                          fontSize: 11, fontWeight: 600, textTransform: "uppercase",
+                          letterSpacing: "0.06em", color: "#9CA3AF",
+                          cursor: col.key ? "pointer" : "default",
+                          userSelect: "none", whiteSpace: "nowrap",
+                        }}
+                      >
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                          {col.label}
+                          {col.key && <SortIcon field={col.key} sortField={sortField} sortDir={sortDir} />}
+                        </span>
                       </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sortedAssessments.map((a, i) => (
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {sorted.map((a, i) => {
+                    const isChecked = checkedIds.has(a.id)
+                    return (
                       <tr
                         key={a.id}
-                        className={`border-b border-border last:border-0 ${
-                          i % 2 === 0 ? "bg-[#F4F4F4]" : ""
-                        }`}
+                        style={{
+                          borderBottom: i < sorted.length - 1 ? "1px solid #F9FAFB" : "none",
+                          background: isChecked ? "#F0FDF4" : "transparent",
+                          transition: "background 0.1s",
+                        }}
+                        onMouseEnter={(e) => { if (!isChecked) (e.currentTarget as HTMLTableRowElement).style.background = "#FAFAFA" }}
+                        onMouseLeave={(e) => { (e.currentTarget as HTMLTableRowElement).style.background = isChecked ? "#F0FDF4" : "transparent" }}
                       >
-                        <td className="py-3 pr-4 text-muted-foreground">
-                          {new Date(a.created_at).toLocaleDateString()}
+                        <td style={{ padding: "12px 0 12px 16px", textAlign: "center", width: 44 }}>
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => toggleCheck(a.id)}
+                            style={{ width: 15, height: 15, accentColor: "#4cf37b", cursor: "pointer" }}
+                          />
                         </td>
-                        <td className="py-3 pr-4 font-medium text-foreground">
-                          {a.company_name}
+                        <td style={{ padding: "12px 14px", color: "#9CA3AF", whiteSpace: "nowrap" }}>
+                          {new Date(a.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                         </td>
-                        <td className="py-3 pr-4 text-foreground">
-                          {a.contact_name}
+                        <td style={{ padding: "12px 14px", fontWeight: 600, color: "#333", whiteSpace: "nowrap" }}>
+                          {a.full_name || "—"}
                         </td>
-                        <td className="py-3 pr-4 text-muted-foreground">
-                          {a.title || "---"}
+                        <td style={{ padding: "12px 14px", color: "#555", whiteSpace: "nowrap" }}>
+                          {a.company_name || "—"}
                         </td>
-                        <td className="py-3 pr-4 text-muted-foreground">
-                          {a.email}
+                        <td style={{ padding: "12px 14px", color: "#9CA3AF", whiteSpace: "nowrap" }}>
+                          {a.title || "—"}
                         </td>
-                        <td className="py-3 pr-4 text-muted-foreground">
-                          {(a.answers as Record<string, unknown>)
-                            ?.product_category as string || "---"}
+                        <td style={{ padding: "12px 14px" }}>
+                          <a
+                            href={`mailto:${a.email}`}
+                            style={{ color: "#4cf37b", textDecoration: "none", fontWeight: 500 }}
+                            onMouseEnter={(e) => (e.currentTarget.style.textDecoration = "underline")}
+                            onMouseLeave={(e) => (e.currentTarget.style.textDecoration = "none")}
+                          >
+                            {a.email}
+                          </a>
                         </td>
-                        <td className="py-3 pr-4 font-semibold text-foreground">
-                          {a.total_score != null
-                            ? `${toPercentageScore(a.total_score)}/100`
-                            : "---"}
+                        <td style={{ padding: "12px 14px" }}>
+                          <PathBadge label={a.path_label} />
                         </td>
-                        <td className="py-3 pr-4">
-                          {a.tier ? (
-                            <TierBadge tier={a.tier} />
-                          ) : (
-                            <span className="text-xs text-muted-foreground">
-                              Incomplete
+                        <td style={{ padding: "12px 14px", whiteSpace: "nowrap" }}>
+                          {a.completed_at ? (
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 12, fontWeight: 600, color: "#16A34A" }}>
+                              <CheckCircle2 style={{ width: 13, height: 13 }} />
+                              Complete
                             </span>
+                          ) : (
+                            <span style={{ fontSize: 12, color: "#D1D5DB" }}>Incomplete</span>
                           )}
                         </td>
-                        <td className="py-3">
-                          <div className="flex items-center gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setSelectedAssessment(a)}
+                        <td style={{ padding: "12px 14px" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                            <button
+                              onClick={() => setSelected(a)}
+                              style={{
+                                fontSize: 12, fontWeight: 600, color: "#333",
+                                background: "#F3F4F6", border: "1px solid #E5E7EB",
+                                borderRadius: 6, padding: "4px 10px", cursor: "pointer",
+                              }}
                             >
                               View
-                            </Button>
+                            </button>
                             {a.completed_at && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                asChild
+                              <a
+                                href={`/assessment/results/${a.id}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                  display: "flex", alignItems: "center", justifyContent: "center",
+                                  width: 28, height: 28, borderRadius: 6,
+                                  background: "#F3F4F6", border: "1px solid #E5E7EB", color: "#9CA3AF",
+                                }}
                               >
-                                <a
-                                  href={`/assessment/results/${a.id}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                >
-                                  <ExternalLink className="h-3 w-3" />
-                                </a>
-                              </Button>
+                                <ExternalLink style={{ width: 13, height: 13 }} />
+                              </a>
                             )}
                           </div>
                         </td>
                       </tr>
-                    ))}
-                    {sortedAssessments.length === 0 && (
-                      <tr>
-                        <td
-                          colSpan={9}
-                          className="py-8 text-center text-muted-foreground"
-                        >
-                          No assessments yet.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </main>
-      <Footer />
+                    )
+                  })}
+                  {sorted.length === 0 && (
+                    <tr>
+                      <td colSpan={9} style={{ padding: "48px 16px", textAlign: "center", color: "#9CA3AF", fontSize: 14 }}>
+                        No assessments yet.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
 
-      {/* Detail Dialog */}
-      <Dialog
-        open={!!selectedAssessment}
-        onOpenChange={() => setSelectedAssessment(null)}
-      >
-        <DialogContent className="max-h-[85vh] max-w-[700px] overflow-y-auto">
-          {selectedAssessment && (
+      {/* ── Detail dialog ─────────────────────────────────────────────────────── */}
+      <Dialog open={!!selected} onOpenChange={() => setSelected(null)}>
+        <DialogContent className="max-h-[88vh] max-w-[660px] overflow-y-auto">
+          {selected && (
             <>
               <DialogHeader>
-                <DialogTitle className="text-[var(--brand-dark)]">
-                  {selectedAssessment.company_name}
+                <DialogTitle style={{ fontSize: 18, fontWeight: 700, color: "#333" }}>
+                  {selected.company_name}
                 </DialogTitle>
               </DialogHeader>
-              <div className="flex flex-col gap-6">
-                {/* Contact Info */}
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Contact</p>
-                    <p className="font-medium text-foreground">
-                      {selectedAssessment.contact_name}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Title</p>
-                    <p className="font-medium text-foreground">
-                      {selectedAssessment.title || "N/A"}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Email</p>
-                    <p className="font-medium text-foreground">
-                      {selectedAssessment.email}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Phone</p>
-                    <p className="font-medium text-foreground">
-                      {selectedAssessment.phone || "N/A"}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Date</p>
-                    <p className="font-medium text-foreground">
-                      {new Date(
-                        selectedAssessment.created_at
-                      ).toLocaleDateString()}
-                    </p>
-                  </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+                {/* Contact grid */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px 24px" }}>
+                  {[
+                    { label: "Name",     value: selected.full_name || "—" },
+                    { label: "Title",    value: selected.title || "—" },
+                    { label: "Email",    value: selected.email, isEmail: true },
+                    { label: "Path",     value: null, badge: true },
+                    { label: "Started",  value: new Date(selected.created_at).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) },
+                    ...(selected.completed_at ? [{
+                      label: "Completed",
+                      value: new Date(selected.completed_at).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }),
+                    }] : []),
+                  ].map(({ label, value, isEmail, badge }) => (
+                    <div key={label}>
+                      <p style={{ fontSize: 11, color: "#9CA3AF", margin: "0 0 3px", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.05em" }}>{label}</p>
+                      {badge
+                        ? <PathBadge label={selected.path_label} />
+                        : isEmail
+                          ? <a href={`mailto:${value}`} style={{ fontSize: 14, fontWeight: 500, color: "#4cf37b", textDecoration: "none" }}>{value}</a>
+                          : <p style={{ fontSize: 14, fontWeight: 500, color: "#333", margin: 0 }}>{value as string}</p>
+                      }
+                    </div>
+                  ))}
                 </div>
 
-                {/* Score Summary */}
-                {selectedAssessment.total_score !== null && (
-                  <div className="flex items-center gap-4">
-                    <div className="text-3xl font-bold text-[var(--brand-dark)]">
-                      {toPercentageScore(selectedAssessment.total_score ?? 0)}/100
+                {/* Divider */}
+                <div style={{ borderTop: "1px solid #F3F4F6" }} />
+
+                {/* AI Output */}
+                <div>
+                  <p style={{ fontSize: 11, color: "#9CA3AF", margin: "0 0 10px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                    AI Diagnosis
+                  </p>
+                  {selected.ai_output ? (
+                    <div style={{ background: "#FAFAFA", border: "1px solid #E5E7EB", borderRadius: 8, padding: "16px 18px" }}>
+                      <p style={{ whiteSpace: "pre-wrap", fontSize: 14, lineHeight: 1.7, color: "#333", margin: 0 }}>
+                        {selected.ai_output}
+                      </p>
                     </div>
-                    {selectedAssessment.tier && (
-                      <TierBadge tier={selectedAssessment.tier} />
-                    )}
-                  </div>
-                )}
+                  ) : (
+                    <div style={{ background: "#FAFAFA", border: "1px solid #E5E7EB", borderRadius: 8, padding: "14px 16px", fontSize: 13, color: "#9CA3AF" }}>
+                      {selected.completed_at
+                        ? "AI output not yet generated — open the results page to trigger generation."
+                        : "Assessment not yet completed."}
+                    </div>
+                  )}
+                </div>
 
-                {/* Section Scores */}
-                {selectedAssessment.section_scores && (
-                  <div className="flex flex-col gap-3">
-                    <h3 className="text-sm font-semibold text-[var(--brand-dark)]">
-                      Section Scores
-                    </h3>
-                    {sections.map((section) => (
-                      <div key={section.id} className="flex flex-col gap-1">
-                        <p className="text-xs text-muted-foreground">
-                          {section.title}
-                        </p>
-                        <ScoreBar
-                          score={
-                            selectedAssessment.section_scores?.[section.id] || 0
-                          }
-                          max={25}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* View Results Link */}
-                {selectedAssessment.completed_at && (
-                  <Button
-                    className="bg-[var(--brand-green)] text-[var(--brand-dark)] hover:bg-[var(--brand-green)]/90 font-semibold"
-                    asChild
+                {/* Results link */}
+                {selected.completed_at && (
+                  <a
+                    href={`/assessment/results/${selected.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: "inline-flex", alignItems: "center", gap: 8, alignSelf: "flex-start",
+                      background: "#4cf37b", color: "#333",
+                      fontSize: 13, fontWeight: 700, textDecoration: "none",
+                      padding: "10px 18px", borderRadius: 7,
+                    }}
                   >
-                    <a
-                      href={`/assessment/results/${selectedAssessment.id}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <ExternalLink className="mr-2 h-4 w-4" />
-                      View Full Results
-                    </a>
-                  </Button>
+                    <ExternalLink style={{ width: 14, height: 14 }} />
+                    View Results Page
+                  </a>
                 )}
               </div>
             </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Delete confirmation dialog ────────────────────────────────────────── */}
+      <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <DialogContent style={{ maxWidth: 400 }}>
+          <DialogHeader>
+            <DialogTitle style={{ display: "flex", alignItems: "center", gap: 8, color: "#333" }}>
+              <AlertTriangle style={{ width: 18, height: 18, color: "#DC2626" }} />
+              Confirm Deletion
+            </DialogTitle>
+          </DialogHeader>
+          <p style={{ fontSize: 14, color: "#555", margin: "4px 0 20px" }}>
+            Delete <strong>{checkedIds.size}</strong> assessment{checkedIds.size !== 1 ? "s" : ""}? This cannot be undone.
+          </p>
+          <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+            <button
+              onClick={() => setShowDeleteConfirm(false)}
+              style={{ fontSize: 13, fontWeight: 600, color: "#555", background: "#F3F4F6", border: "1px solid #E5E7EB", borderRadius: 6, padding: "8px 16px", cursor: "pointer" }}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleDeleteConfirmed}
+              disabled={deleting}
+              style={{ fontSize: 13, fontWeight: 700, color: "#fff", background: "#DC2626", border: "none", borderRadius: 6, padding: "8px 16px", cursor: "pointer", opacity: deleting ? 0.6 : 1 }}
+            >
+              {deleting ? "Deleting…" : `Delete ${checkedIds.size}`}
+            </button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

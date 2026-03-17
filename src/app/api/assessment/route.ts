@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSupabase } from "@/lib/supabase";
 import type { Database } from "@/types/supabase";
+import { sendLeadNotificationEmail } from "@/lib/lead-notification";
 
 /** Body from the "Begin Your Assessment" lead capture form. */
 export interface StartAssessmentBody {
@@ -71,8 +72,18 @@ export async function POST(request: Request) {
       );
     }
 
+    let supabase;
+    try {
+      supabase = getServerSupabase();
+    } catch (e) {
+      console.error("Supabase config error:", e);
+      return NextResponse.json(
+        { error: "Server is not configured. Set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in .env." },
+        { status: 503 }
+      );
+    }
+
     const row = startBodyToRow(body);
-    const supabase = getServerSupabase();
 
     const { data: rawData, error } = await supabase
       .from("assessments")
@@ -90,6 +101,15 @@ export async function POST(request: Request) {
         { status: 500 }
       );
     }
+
+    // Fire-and-forget: notify admin of new lead
+    void sendLeadNotificationEmail({
+      assessmentId: data.id,
+      fullName: body.contact_name?.trim() ?? "",
+      email: body.email?.trim() ?? "",
+      companyName: body.company_name?.trim() ?? "",
+      title: body.title ?? undefined,
+    }).catch(() => {});
 
     return NextResponse.json({ id: data.id, created_at: data.created_at });
   } catch (e) {

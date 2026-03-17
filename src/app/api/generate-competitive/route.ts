@@ -3,6 +3,8 @@ import type { CompetitiveLandscapeOutput } from "@/types/competitive";
 import { isCompetitiveLandscapeOutput } from "@/types/competitive";
 import { sectionCompetitiveConfig } from "@/data/section-competitive";
 
+export const maxDuration = 120;
+
 const COMPETITIVE_TIMEOUT_MS = 90_000; // Web search can take longer
 
 const SYSTEM_PROMPT = `You are a senior MSP channel strategy consultant researching the competitive MSP landscape for a B2B software vendor. Your job is to identify their direct competitors and assess each competitor's MSP channel presence.
@@ -105,7 +107,7 @@ export async function POST(request: Request) {
       anthropic.messages.create(
         {
           model: "claude-sonnet-4-6",
-          max_tokens: 3000,
+          max_tokens: 4000,
           system: SYSTEM_PROMPT,
           messages: [{ role: "user", content: userPrompt }],
           tools: [{ type: "web_search_20250305" as const, name: "web_search" }],
@@ -133,6 +135,12 @@ export async function POST(request: Request) {
     let raw = text.trim();
     const jsonMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
     if (jsonMatch) raw = jsonMatch[1].trim();
+
+    if (!raw.endsWith("}") && !raw.endsWith("]")) {
+      const tail = raw.slice(-120);
+      console.error(`[generate-competitive] Response appears truncated (${raw.length} chars). Tail: ...${tail}`);
+      throw new Error(`Competitive response truncated at ${raw.length} chars — increase maxTokens`);
+    }
 
     const parsed = JSON.parse(raw) as CompetitiveLandscapeOutput;
     if (!isCompetitiveLandscapeOutput(parsed)) {
@@ -175,7 +183,7 @@ async function generateCompetitiveFallback(
 NOTE: You do NOT have web search available for this request. Base your response on your training knowledge of typical competitors and MSP channel dynamics in the vendor's product category. Be clear that this is a high-level view, not live research. Use "Based on typical market structure..." or similar framing. Still return valid JSON.`;
   const response = await anthropic.messages.create({
     model: "claude-sonnet-4-6",
-    max_tokens: 3000,
+    max_tokens: 4000,
     system: FALLBACK_SYSTEM,
     messages: [{ role: "user", content: userPrompt }],
   });
@@ -185,6 +193,9 @@ NOTE: You do NOT have web search available for this request. Base your response 
   let raw = text.trim();
   const jsonMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
   if (jsonMatch) raw = jsonMatch[1].trim();
+  if (!raw.endsWith("}") && !raw.endsWith("]")) {
+    throw new Error(`Competitive fallback response truncated at ${raw.length} chars`);
+  }
   const parsed = JSON.parse(raw) as CompetitiveLandscapeOutput;
   if (!isCompetitiveLandscapeOutput(parsed)) throw new Error("Invalid fallback structure");
   return normalizeCompetitiveOutput(parsed);

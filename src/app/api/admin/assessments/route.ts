@@ -2,6 +2,12 @@ import { NextResponse } from "next/server";
 import { getServerSupabase } from "@/lib/supabase";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
 
+const PATH_LABELS: Record<string, string> = {
+  scratch: "Starting from Scratch",
+  not_producing: "Not Producing Revenue",
+  producing_broken: "Producing but Broken",
+};
+
 export async function GET() {
   const ok = await isAdminAuthenticated();
   if (!ok) {
@@ -19,37 +25,28 @@ export async function GET() {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // Map DB shape to admin UI shape (full_name -> contact_name, overall_score -> total_score, etc.)
   const rows = (data ?? []) as Array<Record<string, unknown>>;
-  const mapped = rows.map((row) => ({
-    id: row.id,
-    company_name: row.company_name,
-    contact_name: row.full_name ?? row.contact_name ?? "",
-    title: row.title ?? null,
-    email: row.email,
-    phone: row.phone ?? null,
-    total_score: row.overall_score ?? row.total_score ?? null,
-    tier: row.readiness_tier ?? row.tier ?? null,
-    section_scores:
-      typeof row.section_1_total === "number" ||
-      typeof row.section_2_total === "number"
-        ? {
-            section1: row.section_1_total ?? null,
-            section2: row.section_2_total ?? null,
-            section3: row.section_3_total ?? null,
-            section4: row.section_4_total ?? null,
-            section5: row.section_5_total ?? null,
-            section6: row.section_6_total ?? null,
-            section7: row.section_7_total ?? null,
-          }
-        : null,
-    answers: { product_category: row.product_category },
-    // Show as complete if completed_at set, or if narrative exists (legacy completed assessments)
-    completed_at:
-      row.completed_at ??
-      (row.ai_narrative ? row.created_at : null),
-    created_at: row.created_at,
-  }));
+  const mapped = rows.map((row) => {
+    const narrative = row.ai_narrative as Record<string, unknown> | null;
+    const isV2 = narrative?.v === 2;
+    const path = isV2
+      ? (narrative?.path as string | undefined)
+      : (row.readiness_tier as string | undefined);
+    const aiOutput = isV2 ? (narrative?.output as string | undefined) : undefined;
+
+    return {
+      id: row.id,
+      full_name: row.full_name ?? "",
+      company_name: row.company_name ?? "",
+      title: row.title ?? null,
+      email: row.email ?? "",
+      path: path ?? null,
+      path_label: path ? (PATH_LABELS[path] ?? path) : null,
+      ai_output: aiOutput ?? null,
+      completed_at: row.completed_at ?? null,
+      created_at: row.created_at,
+    };
+  });
 
   return NextResponse.json(mapped);
 }
