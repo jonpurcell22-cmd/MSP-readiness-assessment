@@ -9,7 +9,7 @@ import { Spinner } from "@/components/ui/spinner"
 type Path = "scratch" | "not_producing" | "producing_broken"
 type RoutingQ1 = "scratch" | "rebuild"
 type RoutingQ2 = "no_revenue" | "has_revenue"
-type Step = "routing_q1" | "routing_q2" | "yes_no" | "multi_select" | "submitting" | "error"
+type Step = "routing_q1" | "routing_q2" | "yes_no" | "multi_select" | "open_text" | "submitting" | "error"
 
 const SCRATCH_QUESTIONS = [
   "Do you have active interest from customers and/or partners about your product as part of a managed service offering today?",
@@ -52,6 +52,10 @@ function AssessmentPageContent() {
   const [yesNoAnswers, setYesNoAnswers] = useState<boolean[]>([])
   const [selectedPainPoints, setSelectedPainPoints] = useState<Set<number>>(new Set())
   const [errorMsg, setErrorMsg] = useState("")
+  const [openText, setOpenText] = useState("")
+  const [pendingSubmit, setPendingSubmit] = useState<{
+    path: Path; q1: RoutingQ1; q2: RoutingQ2 | null; answers: boolean[] | number[]
+  } | null>(null)
 
   // Restore first name from session
   const [firstName, setFirstName] = useState("")
@@ -75,7 +79,7 @@ function AssessmentPageContent() {
   const questions = path === "scratch" ? SCRATCH_QUESTIONS : NOT_PRODUCING_QUESTIONS
   const totalYesNo = path === "scratch" ? 5 : 6
 
-  async function submitAnswers(finalPath: Path, finalQ1: RoutingQ1, finalQ2: RoutingQ2 | null, answers: boolean[] | number[]) {
+  async function submitAnswers(finalPath: Path, finalQ1: RoutingQ1, finalQ2: RoutingQ2 | null, answers: boolean[] | number[], finalOpenText: string) {
     setStep("submitting")
     try {
       const res = await fetch(`/api/assessment/${assessmentId}/submit`, {
@@ -86,6 +90,7 @@ function AssessmentPageContent() {
           routing_q1: finalQ1,
           routing_q2: finalQ2,
           answers,
+          open_text: finalOpenText.trim() || null,
         }),
       })
       if (!res.ok) throw new Error("Submit failed")
@@ -94,6 +99,11 @@ function AssessmentPageContent() {
       setErrorMsg("Something went wrong saving your answers. Please try again.")
       setStep("error")
     }
+  }
+
+  function goToOpenText(p: Path, q1: RoutingQ1, q2: RoutingQ2 | null, answers: boolean[] | number[]) {
+    setPendingSubmit({ path: p, q1, q2, answers })
+    setStep("open_text")
   }
 
   function handleRoutingQ1(answer: RoutingQ1) {
@@ -123,7 +133,7 @@ function AssessmentPageContent() {
     if (newAnswers.length < totalYesNo) {
       setCurrentQ(currentQ + 1)
     } else {
-      void submitAnswers(path!, routingQ1!, routingQ2 ?? null, newAnswers)
+      goToOpenText(path!, routingQ1!, routingQ2 ?? null, newAnswers)
     }
   }
 
@@ -139,7 +149,7 @@ function AssessmentPageContent() {
 
   function handleMultiSelectSubmit() {
     if (selectedPainPoints.size === 0) return
-    void submitAnswers("producing_broken", routingQ1!, routingQ2!, Array.from(selectedPainPoints))
+    goToOpenText("producing_broken", routingQ1!, routingQ2!, Array.from(selectedPainPoints))
   }
 
   // --- ROUTING Q1 ---
@@ -304,6 +314,56 @@ function AssessmentPageContent() {
           >
             Get My Diagnosis →
           </Button>
+        </div>
+      </AssessmentLayout>
+    )
+  }
+
+  // --- OPEN TEXT ---
+  if (step === "open_text" && pendingSubmit) {
+    const CHAR_LIMIT = 1000
+    const remaining = CHAR_LIMIT - openText.length
+    return (
+      <AssessmentLayout>
+        <div className="mx-auto flex w-full max-w-[600px] flex-col gap-8 pt-8">
+          <div className="flex flex-col gap-3">
+            <h2 className="text-xl font-bold text-[var(--brand-dark)] leading-snug sm:text-2xl">
+              Anything else you want me to know?
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              This is optional. Share context that might not have come through in the questions.
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <textarea
+              value={openText}
+              onChange={(e) => {
+                if (e.target.value.length <= CHAR_LIMIT) setOpenText(e.target.value)
+              }}
+              placeholder="What's really going on with your MSP channel right now? Any context that would help me understand your situation."
+              rows={5}
+              className="w-full rounded-lg border-2 border-border bg-card px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-[var(--brand-green)] focus:outline-none resize-none transition-colors"
+            />
+            <p className={`text-xs text-right ${remaining < 100 ? "text-amber-500" : "text-muted-foreground"}`}>
+              {remaining} characters remaining
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-3">
+            <Button
+              onClick={() => void submitAnswers(pendingSubmit.path, pendingSubmit.q1, pendingSubmit.q2, pendingSubmit.answers, openText)}
+              className="h-12 bg-[var(--brand-green)] text-[var(--brand-dark)] hover:bg-[var(--brand-green)]/90 font-bold text-base"
+            >
+              Get My Diagnosis →
+            </Button>
+            <button
+              onClick={() => void submitAnswers(pendingSubmit.path, pendingSubmit.q1, pendingSubmit.q2, pendingSubmit.answers, "")}
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors text-center"
+            >
+              Skip
+            </button>
+          </div>
         </div>
       </AssessmentLayout>
     )

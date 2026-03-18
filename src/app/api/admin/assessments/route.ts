@@ -43,6 +43,7 @@ export async function GET() {
       path: path ?? null,
       path_label: path ? (PATH_LABELS[path] ?? path) : null,
       ai_output: aiOutput ?? null,
+      open_text: (row.open_text as string | null) ?? null,
       completed_at: row.completed_at ?? null,
       created_at: row.created_at,
     };

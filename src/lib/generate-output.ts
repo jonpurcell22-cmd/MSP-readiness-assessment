@@ -7,6 +7,7 @@ export interface V2AssessmentData {
   routing_q1: "scratch" | "rebuild";
   routing_q2: "no_revenue" | "has_revenue" | null;
   answers: boolean[] | number[]; // boolean[] for yes/no paths; number[] (selected indices) for pain points
+  open_text?: string | null;
 }
 
 export interface V2Narrative {
@@ -59,7 +60,8 @@ Rules:
 - Write like a peer who has seen this go wrong, not a salesperson
 - Maximum 150 words total
 - Plain text only — no markdown, no asterisks, no bullet points
-- Format: write the label (VERDICT, INSIGHT, RISK) on its own line, then the content paragraph directly after with a blank line between sections`,
+- Format: write the label (VERDICT, INSIGHT, RISK) on its own line, then the content paragraph directly after with a blank line between sections
+- If the prospect provided additional context in their own words, treat it as the most direct signal you have about their actual situation. Incorporate it naturally — don't quote it verbatim, but let it sharpen the specificity of your output.`,
 
   not_producing: `You are an expert MSP channel strategist with 15+ years of experience helping B2B SaaS vendors fix underperforming MSP programs. A vendor has a program that exists but isn't generating meaningful revenue. Your job is to write a concise, specific output that makes them feel diagnosed, not judged.
 
@@ -68,7 +70,8 @@ Rules:
 - Write like a peer who has fixed this before, not a consultant pitching
 - Maximum 150 words total
 - Plain text only — no markdown, no asterisks, no bullet points
-- Format: write the label (DIAGNOSIS, INSIGHT, CONSEQUENCE) on its own line, then the content paragraph directly after with a blank line between sections`,
+- Format: write the label (DIAGNOSIS, INSIGHT, CONSEQUENCE) on its own line, then the content paragraph directly after with a blank line between sections
+- If the prospect provided additional context in their own words, treat it as the most direct signal you have about their actual situation. Incorporate it naturally — don't quote it verbatim, but let it sharpen the specificity of your output.`,
 
   producing_broken: `You are an expert MSP channel strategist with 15+ years of experience helping B2B SaaS vendors fix MSP programs that are generating revenue but creating serious problems. Your job is to write a concise, specific output that names the root cause behind their pain points and makes them feel like you've seen this exact situation before.
 
@@ -77,11 +80,15 @@ Rules:
 - Write like a peer who has walked into this situation before and knows exactly what happened
 - Maximum 150 words total
 - Plain text only — no markdown, no asterisks, no bullet points
-- Format: write the label (ROOT CAUSE, INSIGHT, COST) on its own line, then the content paragraph directly after with a blank line between sections`,
+- Format: write the label (ROOT CAUSE, INSIGHT, COST) on its own line, then the content paragraph directly after with a blank line between sections
+- If the prospect provided additional context in their own words, treat it as the most direct signal you have about their actual situation. Incorporate it naturally — don't quote it verbatim, but let it sharpen the specificity of your output.`,
 };
 
-function buildScratchPrompt(answers: boolean[]): string {
+function buildScratchPrompt(answers: boolean[], openText?: string | null): string {
   const lines = SCRATCH_QUESTIONS.map((q, i) => `${i + 1}. ${q}: ${answers[i] ? "YES" : "NO"}`);
+  const contextBlock = openText?.trim()
+    ? `\nThe prospect also shared this in their own words: ${openText.trim()}\n\nIf this context is specific and relevant, reference it directly in your INSIGHT section — use their language where it adds precision. If it contradicts or adds nuance to their question answers, weight it heavily. If it's vague or generic, let the answer pattern drive the output and don't force a reference.\n`
+    : "";
   return `The vendor answered YES or NO to these 5 questions:
 ${lines.join("\n")}
 
@@ -92,12 +99,15 @@ VERDICT (one line): A direct, specific statement about their launch readiness ba
 INSIGHT (2-3 sentences): Reflect their specific answer pattern back at them. Name what their nos mean in practice — not as criticism, but as honest diagnosis. Reference the specific questions they answered no to.
 
 RISK (1 sentence): What happens if they launch anyway, or do nothing. Make it specific to their answer pattern. This should create urgency without being alarmist.
-
+${contextBlock}
 End with exactly: Your competitors are capturing the MSP revenue you're not. Book a call.`;
 }
 
-function buildNotProducingPrompt(answers: boolean[]): string {
+function buildNotProducingPrompt(answers: boolean[], openText?: string | null): string {
   const lines = NOT_PRODUCING_QUESTIONS.map((q, i) => `${i + 1}. ${q}: ${answers[i] ? "YES" : "NO"}`);
+  const contextBlock = openText?.trim()
+    ? `\nThe prospect also shared this in their own words: ${openText.trim()}\n\nIf this context is specific and relevant, reference it directly in your INSIGHT section — use their language where it adds precision. If it contradicts or adds nuance to their question answers, weight it heavily. If it's vague or generic, let the answer pattern drive the output and don't force a reference.\n`
+    : "";
   return `The vendor answered YES or NO to these 6 questions:
 ${lines.join("\n")}
 
@@ -108,14 +118,17 @@ DIAGNOSIS (one line): A direct, specific statement about why the program isn't p
 INSIGHT (2-3 sentences): Connect their specific answer pattern to what is most likely killing the program. If they don't know why it isn't working (Q1 = NO), say that directly — it's the most important signal. Reference specific questions they answered no to.
 
 CONSEQUENCE (1 sentence): What happens if the program continues as-is. Make it specific and real — partner attrition, wasted budget, internal credibility loss.
-
+${contextBlock}
 End with exactly: Your competitors are capturing the MSP revenue you're not. Book a call.`;
 }
 
-function buildProducingBrokenPrompt(selectedIndices: number[]): string {
+function buildProducingBrokenPrompt(selectedIndices: number[], openText?: string | null): string {
   const lines = PAIN_POINT_LABELS.map(
     (label, i) => `- ${label}: ${selectedIndices.includes(i) ? "SELECTED" : "not selected"}`
   );
+  const contextBlock = openText?.trim()
+    ? `\nThe prospect also shared this in their own words: ${openText.trim()}\n\nIf this context is specific and relevant, reference it directly in your INSIGHT section — use their language where it adds precision. If it contradicts or adds nuance to their question answers, weight it heavily. If it's vague or generic, let the answer pattern drive the output and don't force a reference.\n`
+    : "";
   return `The vendor selected these pain points (up to 3):
 ${lines.join("\n")}
 
@@ -126,7 +139,7 @@ ROOT CAUSE (one line): Based on their combination of pain points, name the most 
 INSIGHT (2-3 sentences): Explain what their specific combination of pain points tells you about where the program broke down. Be specific to their selections. This should feel like you've diagnosed their exact situation, not a generic MSP program problem.
 
 COST (1 sentence): What this combination of pain points is costing them right now — in partner relationships, internal trust, or revenue ceiling. Make it tangible.
-
+${contextBlock}
 End with exactly: Frustrated partners leave. Confused sales teams lose. Both are happening right now. Book a call.`;
 }
 
@@ -139,11 +152,11 @@ export async function generateAssessmentOutput(data: V2AssessmentData): Promise<
 
   let userPrompt: string;
   if (data.path === "scratch") {
-    userPrompt = buildScratchPrompt(data.answers as boolean[]);
+    userPrompt = buildScratchPrompt(data.answers as boolean[], data.open_text);
   } else if (data.path === "not_producing") {
-    userPrompt = buildNotProducingPrompt(data.answers as boolean[]);
+    userPrompt = buildNotProducingPrompt(data.answers as boolean[], data.open_text);
   } else {
-    userPrompt = buildProducingBrokenPrompt(data.answers as number[]);
+    userPrompt = buildProducingBrokenPrompt(data.answers as number[], data.open_text);
   }
 
   const response = await anthropic.messages.create(

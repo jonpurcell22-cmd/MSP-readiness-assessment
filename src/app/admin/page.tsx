@@ -34,6 +34,7 @@ interface Assessment {
   path: string | null
   path_label: string | null
   ai_output: string | null
+  open_text: string | null
   completed_at: string | null
   created_at: string
 }
@@ -545,6 +546,23 @@ export default function AdminPage() {
 
                 {/* Divider */}
                 <div style={{ borderTop: "1px solid #F3F4F6" }} />
+
+                {/* Open text */}
+                {selected.open_text && (
+                  <>
+                    <div>
+                      <p style={{ fontSize: 11, color: "#9CA3AF", margin: "0 0 10px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                        Additional Context
+                      </p>
+                      <div style={{ background: "#FAFAFA", border: "1px solid #E5E7EB", borderRadius: 8, padding: "16px 18px" }}>
+                        <p style={{ whiteSpace: "pre-wrap", fontSize: 14, lineHeight: 1.7, color: "#333", margin: 0 }}>
+                          {selected.open_text}
+                        </p>
+                      </div>
+                    </div>
+                    <div style={{ borderTop: "1px solid #F3F4F6" }} />
+                  </>
+                )}
 
                 {/* AI Output */}
                 <div>

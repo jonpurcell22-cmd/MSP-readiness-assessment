@@ -9,9 +9,9 @@ export async function POST(
   const { id } = await params;
   if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
 
-  let body: V2AssessmentData;
+  let body: V2AssessmentData & { open_text?: string | null };
   try {
-    body = (await request.json()) as V2AssessmentData;
+    body = (await request.json()) as V2AssessmentData & { open_text?: string | null };
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
@@ -28,12 +28,17 @@ export async function POST(
     answers: body.answers,
   };
 
+  const openText = typeof body.open_text === "string" && body.open_text.trim()
+    ? body.open_text.trim()
+    : null;
+
   const supabase = createAdminClient();
   const { error } = await supabase
     .from("assessments")
     .update({
       readiness_tier: body.path,
       ai_narrative: narrative,
+      open_text: openText,
       completed_at: new Date().toISOString(),
     } as never)
     .eq("id", id);

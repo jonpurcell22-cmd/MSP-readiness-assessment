@@ -68,6 +68,7 @@ export async function POST(
           routing_q1: narrative.routing_q1,
           routing_q2: narrative.routing_q2,
           answers: narrative.answers,
+          open_text: (row as unknown as Record<string, unknown>).open_text as string | null ?? null,
         });
         clearInterval(heartbeat);
 
