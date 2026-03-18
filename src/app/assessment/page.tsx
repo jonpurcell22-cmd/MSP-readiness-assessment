@@ -3,7 +3,6 @@
 import { Suspense, useEffect, useState } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { AssessmentLayout } from "@/components/assessment-layout"
-import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 
 type Path = "scratch" | "not_producing" | "producing_broken"
@@ -57,7 +56,6 @@ function AssessmentPageContent() {
     path: Path; q1: RoutingQ1; q2: RoutingQ2 | null; answers: boolean[] | number[]
   } | null>(null)
 
-  // Restore first name from session
   const [firstName, setFirstName] = useState("")
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -68,9 +66,9 @@ function AssessmentPageContent() {
   if (!assessmentId) {
     return (
       <AssessmentLayout>
-        <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4 text-center">
-          <p className="text-muted-foreground">Invalid assessment link. Please start from the beginning.</p>
-          <Button onClick={() => router.push("/")}>Go Back</Button>
+        <div style={{ display: "flex", minHeight: "50vh", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, textAlign: "center" }}>
+          <p style={{ color: "#8b8b9a" }}>Invalid assessment link. Please start from the beginning.</p>
+          <button className="btn-primary" style={{ padding: "10px 24px", border: "none", cursor: "pointer", borderRadius: 12 }} onClick={() => router.push("/")}>Go Back</button>
         </div>
       </AssessmentLayout>
     )
@@ -152,34 +150,62 @@ function AssessmentPageContent() {
     goToOpenText("producing_broken", routingQ1!, routingQ2!, Array.from(selectedPainPoints))
   }
 
+  const eyebrowStyle: React.CSSProperties = {
+    fontSize: 11,
+    fontWeight: 600,
+    textTransform: "uppercase",
+    letterSpacing: "0.1em",
+    color: "#8b8b9a",
+    marginBottom: 16,
+  }
+
+  const headlineStyle: React.CSSProperties = {
+    fontSize: 22,
+    fontWeight: 700,
+    color: "#ffffff",
+    letterSpacing: "-0.02em",
+    lineHeight: 1.3,
+    marginBottom: 8,
+  }
+
   // --- ROUTING Q1 ---
   if (step === "routing_q1") {
     return (
       <AssessmentLayout>
-        <div className="mx-auto flex w-full max-w-[600px] flex-col gap-10 pt-8">
+        <div style={{ maxWidth: 580, margin: "0 auto", paddingTop: 32, width: "100%" }}>
           {firstName && (
-            <p className="text-sm text-muted-foreground">Hi {firstName} — let's get started.</p>
-          )}
-          <div className="flex flex-col gap-6">
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-              Question 1 of 2
+            <p style={{ color: "#8b8b9a", fontSize: 14, marginBottom: 28 }}>
+              Hi {firstName} — let&apos;s get started.
             </p>
-            <h2 className="text-2xl font-bold text-[var(--brand-dark)] leading-snug">
-              Are you building your MSP program for the first time, or rebuilding an existing one?
-            </h2>
-          </div>
-          <div className="flex flex-col gap-3">
+          )}
+          <p style={eyebrowStyle}>Question 1 of 2</p>
+          <h2 style={headlineStyle}>
+            Are you building your MSP program for the first time, or rebuilding an existing one?
+          </h2>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 32 }}>
             <button
               onClick={() => handleRoutingQ1("scratch")}
-              className="rounded-lg border-2 border-border bg-card px-6 py-5 text-left text-sm font-medium text-foreground transition-all hover:border-[var(--brand-green)] hover:bg-[var(--brand-green)]/5"
+              className="answer-option"
+              style={{ padding: "20px 24px", textAlign: "left", border: "none", width: "100%" }}
             >
-              Building from scratch — we don't have an MSP program yet
+              <span style={{ fontSize: 15, fontWeight: 600, color: "#ffffff", display: "block", marginBottom: 4 }}>
+                Building from scratch
+              </span>
+              <span style={{ fontSize: 13, color: "#8b8b9a" }}>
+                We don&apos;t have an MSP program yet
+              </span>
             </button>
             <button
               onClick={() => handleRoutingQ1("rebuild")}
-              className="rounded-lg border-2 border-border bg-card px-6 py-5 text-left text-sm font-medium text-foreground transition-all hover:border-[var(--brand-green)] hover:bg-[var(--brand-green)]/5"
+              className="answer-option"
+              style={{ padding: "20px 24px", textAlign: "left", border: "none", width: "100%" }}
             >
-              Rebuilding — we have a program but it's not working
+              <span style={{ fontSize: 15, fontWeight: 600, color: "#ffffff", display: "block", marginBottom: 4 }}>
+                Rebuilding
+              </span>
+              <span style={{ fontSize: 13, color: "#8b8b9a" }}>
+                We have a program but it&apos;s not working
+              </span>
             </button>
           </div>
         </div>
@@ -191,32 +217,42 @@ function AssessmentPageContent() {
   if (step === "routing_q2") {
     return (
       <AssessmentLayout>
-        <div className="mx-auto flex w-full max-w-[600px] flex-col gap-10 pt-8">
-          <div className="flex flex-col gap-6">
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-              Question 2 of 2
-            </p>
-            <h2 className="text-2xl font-bold text-[var(--brand-dark)] leading-snug">
-              Is your program currently generating revenue?
-            </h2>
-          </div>
-          <div className="flex flex-col gap-3">
+        <div style={{ maxWidth: 580, margin: "0 auto", paddingTop: 32, width: "100%" }}>
+          <p style={eyebrowStyle}>Question 2 of 2</p>
+          <h2 style={headlineStyle}>
+            Is your program currently generating revenue?
+          </h2>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 32 }}>
             <button
               onClick={() => handleRoutingQ2("no_revenue")}
-              className="rounded-lg border-2 border-border bg-card px-6 py-5 text-left text-sm font-medium text-foreground transition-all hover:border-[var(--brand-green)] hover:bg-[var(--brand-green)]/5"
+              className="answer-option"
+              style={{ padding: "20px 24px", textAlign: "left", border: "none", width: "100%" }}
             >
-              No — the program exists but isn't producing revenue
+              <span style={{ fontSize: 15, fontWeight: 600, color: "#ffffff", display: "block", marginBottom: 4 }}>
+                No
+              </span>
+              <span style={{ fontSize: 13, color: "#8b8b9a" }}>
+                The program exists but isn&apos;t producing revenue
+              </span>
             </button>
             <button
               onClick={() => handleRoutingQ2("has_revenue")}
-              className="rounded-lg border-2 border-border bg-card px-6 py-5 text-left text-sm font-medium text-foreground transition-all hover:border-[var(--brand-green)] hover:bg-[var(--brand-green)]/5"
+              className="answer-option"
+              style={{ padding: "20px 24px", textAlign: "left", border: "none", width: "100%" }}
             >
-              Yes — it's generating revenue, but something isn't working
+              <span style={{ fontSize: 15, fontWeight: 600, color: "#ffffff", display: "block", marginBottom: 4 }}>
+                Yes
+              </span>
+              <span style={{ fontSize: 13, color: "#8b8b9a" }}>
+                It&apos;s generating revenue, but something isn&apos;t working
+              </span>
             </button>
           </div>
           <button
             onClick={() => setStep("routing_q1")}
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors self-start"
+            style={{ marginTop: 28, fontSize: 13, color: "#8b8b9a", background: "none", border: "none", cursor: "pointer", padding: 0, transition: "color 0.2s" }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = "#ffffff")}
+            onMouseLeave={(e) => (e.currentTarget.style.color = "#8b8b9a")}
           >
             ← Back
           </button>
@@ -230,39 +266,55 @@ function AssessmentPageContent() {
     const progress = Math.round((currentQ / totalYesNo) * 100)
     return (
       <AssessmentLayout>
-        <div className="mx-auto flex w-full max-w-[600px] flex-col gap-10 pt-8">
+        <div style={{ maxWidth: 580, margin: "0 auto", paddingTop: 32, width: "100%" }}>
           {/* Progress bar */}
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>Question {currentQ + 1} of {totalYesNo}</span>
-              <span>{progress}% complete</span>
+          <div style={{ marginBottom: 40 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+              <span style={{ fontSize: 12, color: "#8b8b9a" }}>Question {currentQ + 1} of {totalYesNo}</span>
+              <span style={{ fontSize: 12, color: "#8b8b9a" }}>{progress}%</span>
             </div>
-            <div className="h-1.5 w-full rounded-full bg-border">
+            <div style={{ height: 2, width: "100%", background: "rgba(255,255,255,0.1)", borderRadius: 2 }}>
               <div
-                className="h-1.5 rounded-full bg-[var(--brand-green)] transition-all duration-300"
-                style={{ width: `${progress}%` }}
+                style={{
+                  height: "100%",
+                  borderRadius: 2,
+                  background: "#4cf37b",
+                  boxShadow: "0 0 8px rgba(76,243,123,0.5)",
+                  width: `${progress}%`,
+                  transition: "width 0.3s ease",
+                }}
               />
             </div>
           </div>
 
-          <h2 className="text-xl font-bold text-[var(--brand-dark)] leading-snug sm:text-2xl">
+          <h2 style={{ ...headlineStyle, fontSize: 20, marginBottom: 36 }}>
             {questions[currentQ]}
           </h2>
 
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <Button
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <button
               onClick={() => handleYesNo(true)}
-              className="flex-1 h-14 bg-[var(--brand-green)] text-[var(--brand-dark)] hover:bg-[var(--brand-green)]/90 font-bold text-base shadow-sm"
+              className="btn-primary"
+              style={{ height: 56, width: "100%", fontSize: 16, border: "none", cursor: "pointer", borderRadius: 12 }}
             >
               Yes
-            </Button>
-            <Button
+            </button>
+            <button
               onClick={() => handleYesNo(false)}
-              variant="outline"
-              className="flex-1 h-14 font-bold text-base border-2"
+              className="answer-option"
+              style={{
+                height: 56,
+                width: "100%",
+                fontSize: 16,
+                fontWeight: 600,
+                color: "#ffffff",
+                border: "1px solid rgba(255,255,255,0.08)",
+                cursor: "pointer",
+                borderRadius: 14,
+              }}
             >
               No
-            </Button>
+            </button>
           </div>
         </div>
       </AssessmentLayout>
@@ -273,17 +325,13 @@ function AssessmentPageContent() {
   if (step === "multi_select") {
     return (
       <AssessmentLayout>
-        <div className="mx-auto flex w-full max-w-[640px] flex-col gap-8 pt-8">
-          <div className="flex flex-col gap-3">
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-              Select up to 3
-            </p>
-            <h2 className="text-xl font-bold text-[var(--brand-dark)] leading-snug sm:text-2xl">
-              Your program is generating revenue, but something isn't working. Select your top pain points:
-            </h2>
-          </div>
+        <div style={{ maxWidth: 620, margin: "0 auto", paddingTop: 32, width: "100%" }}>
+          <p style={eyebrowStyle}>Select up to 3</p>
+          <h2 style={{ ...headlineStyle, marginBottom: 32 }}>
+            Your program is generating revenue, but something isn&apos;t working. Select your top pain points:
+          </h2>
 
-          <div className="flex flex-col gap-2">
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {PAIN_POINTS.map((point, i) => {
               const selected = selectedPainPoints.has(i)
               const disabled = !selected && selectedPainPoints.size >= 3
@@ -292,28 +340,64 @@ function AssessmentPageContent() {
                   key={i}
                   onClick={() => togglePainPoint(i)}
                   disabled={disabled}
-                  className={`rounded-lg border-2 px-5 py-4 text-left text-sm font-medium transition-all ${
-                    selected
-                      ? "border-[var(--brand-green)] bg-[var(--brand-green)]/10 text-[var(--brand-dark)]"
-                      : disabled
-                      ? "border-border bg-card text-muted-foreground opacity-40 cursor-not-allowed"
-                      : "border-border bg-card text-foreground hover:border-[var(--brand-green)] hover:bg-[var(--brand-green)]/5"
-                  }`}
+                  className={`answer-option${selected ? " selected" : ""}`}
+                  style={{
+                    padding: "16px 20px",
+                    textAlign: "left",
+                    width: "100%",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 14,
+                    border: "none",
+                    opacity: disabled ? 0.3 : 1,
+                    cursor: disabled ? "not-allowed" : "pointer",
+                  }}
                 >
-                  <span className={`mr-3 inline-block h-4 w-4 rounded border-2 align-middle ${selected ? "border-[var(--brand-green)] bg-[var(--brand-green)]" : "border-current"}`} />
-                  {point}
+                  <span
+                    style={{
+                      flexShrink: 0,
+                      width: 18,
+                      height: 18,
+                      borderRadius: 4,
+                      border: selected ? "2px solid #4cf37b" : "2px solid rgba(255,255,255,0.2)",
+                      background: selected ? "#4cf37b" : "transparent",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      transition: "all 0.2s",
+                    }}
+                  >
+                    {selected && (
+                      <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                        <path d="M1 4l3 3 5-6" stroke="#0a0a0f" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    )}
+                  </span>
+                  <span style={{ fontSize: 14, fontWeight: 500, color: selected ? "#ffffff" : "#c8c8d4" }}>
+                    {point}
+                  </span>
                 </button>
               )
             })}
           </div>
 
-          <Button
-            onClick={handleMultiSelectSubmit}
-            disabled={selectedPainPoints.size === 0}
-            className="h-12 bg-[var(--brand-green)] text-[var(--brand-dark)] hover:bg-[var(--brand-green)]/90 font-bold text-base"
-          >
-            Get My Diagnosis →
-          </Button>
+          <div style={{ marginTop: 28 }}>
+            <button
+              onClick={handleMultiSelectSubmit}
+              disabled={selectedPainPoints.size === 0}
+              className="btn-primary"
+              style={{
+                height: 52,
+                width: "100%",
+                fontSize: 15,
+                border: "none",
+                cursor: selectedPainPoints.size === 0 ? "not-allowed" : "pointer",
+                borderRadius: 12,
+              }}
+            >
+              Get My Diagnosis →
+            </button>
+          </div>
         </div>
       </AssessmentLayout>
     )
@@ -325,17 +409,15 @@ function AssessmentPageContent() {
     const remaining = CHAR_LIMIT - openText.length
     return (
       <AssessmentLayout>
-        <div className="mx-auto flex w-full max-w-[600px] flex-col gap-8 pt-8">
-          <div className="flex flex-col gap-3">
-            <h2 className="text-xl font-bold text-[var(--brand-dark)] leading-snug sm:text-2xl">
-              Anything else you want me to know?
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              This is optional. Share context that might not have come through in the questions.
-            </p>
-          </div>
+        <div style={{ maxWidth: 580, margin: "0 auto", paddingTop: 32, width: "100%" }}>
+          <h2 style={{ ...headlineStyle, marginBottom: 8 }}>
+            Anything else you want me to know?
+          </h2>
+          <p style={{ color: "#8b8b9a", fontSize: 14, lineHeight: 1.6, marginBottom: 28 }}>
+            This is optional. Share context that might not have come through in the questions.
+          </p>
 
-          <div className="flex flex-col gap-2">
+          <div style={{ position: "relative" }}>
             <textarea
               value={openText}
               onChange={(e) => {
@@ -343,23 +425,43 @@ function AssessmentPageContent() {
               }}
               placeholder="What's really going on with your MSP channel right now? Any context that would help me understand your situation."
               rows={5}
-              className="w-full rounded-lg border-2 border-border bg-card px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-[var(--brand-green)] focus:outline-none resize-none transition-colors"
+              className="input-dark"
+              style={{ resize: "none", lineHeight: 1.6, paddingTop: 14, paddingBottom: 14 }}
             />
-            <p className={`text-xs text-right ${remaining < 100 ? "text-amber-500" : "text-muted-foreground"}`}>
+            <p
+              style={{
+                textAlign: "right",
+                fontSize: 12,
+                marginTop: 6,
+                color: remaining < 100 ? "#f59e0b" : "#555566",
+              }}
+            >
               {remaining} characters remaining
             </p>
           </div>
 
-          <div className="flex flex-col gap-3">
-            <Button
+          <div style={{ marginTop: 20, display: "flex", flexDirection: "column", gap: 12 }}>
+            <button
               onClick={() => void submitAnswers(pendingSubmit.path, pendingSubmit.q1, pendingSubmit.q2, pendingSubmit.answers, openText)}
-              className="h-12 bg-[var(--brand-green)] text-[var(--brand-dark)] hover:bg-[var(--brand-green)]/90 font-bold text-base"
+              className="btn-primary"
+              style={{ height: 52, width: "100%", fontSize: 15, border: "none", cursor: "pointer", borderRadius: 12 }}
             >
               Get My Diagnosis →
-            </Button>
+            </button>
             <button
               onClick={() => void submitAnswers(pendingSubmit.path, pendingSubmit.q1, pendingSubmit.q2, pendingSubmit.answers, "")}
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors text-center"
+              style={{
+                fontSize: 13,
+                color: "#8b8b9a",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                textAlign: "center",
+                padding: "4px 0",
+                transition: "color 0.2s",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = "#ffffff")}
+              onMouseLeave={(e) => (e.currentTarget.style.color = "#8b8b9a")}
             >
               Skip
             </button>
@@ -373,9 +475,9 @@ function AssessmentPageContent() {
   if (step === "submitting") {
     return (
       <AssessmentLayout>
-        <div className="flex min-h-[60vh] flex-col items-center justify-center gap-6 text-center">
-          <Spinner className="size-10 text-[var(--brand-green)]" />
-          <p className="text-base font-medium text-[var(--brand-dark)]">Saving your answers...</p>
+        <div style={{ display: "flex", minHeight: "60vh", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 20, textAlign: "center" }}>
+          <Spinner className="size-10" style={{ color: "#4cf37b" }} />
+          <p style={{ fontSize: 15, fontWeight: 500, color: "#ffffff" }}>Saving your answers...</p>
         </div>
       </AssessmentLayout>
     )
@@ -384,11 +486,15 @@ function AssessmentPageContent() {
   // --- ERROR ---
   return (
     <AssessmentLayout>
-      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-6 text-center">
-        <p className="text-base text-destructive">{errorMsg}</p>
-        <Button onClick={() => { setStep("routing_q1"); setYesNoAnswers([]); setCurrentQ(0); }}>
+      <div style={{ display: "flex", minHeight: "60vh", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 20, textAlign: "center" }}>
+        <p style={{ fontSize: 14, color: "#f87171" }}>{errorMsg}</p>
+        <button
+          className="btn-primary"
+          style={{ padding: "12px 28px", border: "none", cursor: "pointer", borderRadius: 12, fontSize: 14 }}
+          onClick={() => { setStep("routing_q1"); setYesNoAnswers([]); setCurrentQ(0) }}
+        >
           Start Over
-        </Button>
+        </button>
       </div>
     </AssessmentLayout>
   )

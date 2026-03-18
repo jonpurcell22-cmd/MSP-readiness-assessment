@@ -2,9 +2,6 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 
 export function LeadCaptureForm() {
   const router = useRouter()
@@ -60,47 +57,80 @@ export function LeadCaptureForm() {
     }
   }
 
+  const labelStyle: React.CSSProperties = {
+    fontSize: 13,
+    fontWeight: 500,
+    color: "#8b8b9a",
+    marginBottom: 6,
+    display: "block",
+  }
+
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="first_name">
-            First Name <span className="text-destructive">*</span>
-          </Label>
-          <Input id="first_name" name="first_name" required placeholder="Jane" />
+    <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        <div>
+          <label htmlFor="first_name" style={labelStyle}>
+            First Name <span style={{ color: "#4cf37b" }}>*</span>
+          </label>
+          <input
+            id="first_name"
+            name="first_name"
+            required
+            placeholder="Jane"
+            className="input-dark"
+          />
         </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="last_name">
-            Last Name <span className="text-destructive">*</span>
-          </Label>
-          <Input id="last_name" name="last_name" required placeholder="Smith" />
+        <div>
+          <label htmlFor="last_name" style={labelStyle}>
+            Last Name <span style={{ color: "#4cf37b" }}>*</span>
+          </label>
+          <input
+            id="last_name"
+            name="last_name"
+            required
+            placeholder="Smith"
+            className="input-dark"
+          />
         </div>
       </div>
 
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="company_name">
-          Company Name <span className="text-destructive">*</span>
-        </Label>
-        <Input id="company_name" name="company_name" required placeholder="Acme Corp" />
+      <div>
+        <label htmlFor="company_name" style={labelStyle}>
+          Company Name <span style={{ color: "#4cf37b" }}>*</span>
+        </label>
+        <input
+          id="company_name"
+          name="company_name"
+          required
+          placeholder="Acme Corp"
+          className="input-dark"
+        />
       </div>
 
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="email">
-          Work Email <span className="text-destructive">*</span>
-        </Label>
-        <Input id="email" name="email" type="email" required placeholder="jane@acme.com" />
+      <div>
+        <label htmlFor="email" style={labelStyle}>
+          Work Email <span style={{ color: "#4cf37b" }}>*</span>
+        </label>
+        <input
+          id="email"
+          name="email"
+          type="email"
+          required
+          placeholder="jane@acme.com"
+          className="input-dark"
+        />
       </div>
 
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="title">
-          Title <span className="text-destructive">*</span>
-        </Label>
+      <div>
+        <label htmlFor="title" style={labelStyle}>
+          Title <span style={{ color: "#4cf37b" }}>*</span>
+        </label>
         <select
           id="title"
           name="title"
           required
           defaultValue=""
-          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          className="select-dark"
         >
           <option value="" disabled>Select your title</option>
           <option value="Founder/CEO">Founder/CEO</option>
@@ -110,17 +140,27 @@ export function LeadCaptureForm() {
         </select>
       </div>
 
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      {error && (
+        <p style={{ fontSize: 13, color: "#f87171", margin: 0 }}>{error}</p>
+      )}
 
-      <Button
+      <button
         type="submit"
         disabled={isSubmitting}
-        className="mt-2 h-12 bg-[var(--brand-green)] text-[var(--brand-dark)] hover:bg-[var(--brand-green)]/90 font-bold text-base shadow-md transition-all duration-200 hover:shadow-lg hover:scale-[1.02]"
+        className="btn-primary"
+        style={{
+          marginTop: 4,
+          height: 48,
+          width: "100%",
+          fontSize: 15,
+          border: "none",
+          cursor: isSubmitting ? "not-allowed" : "pointer",
+        }}
       >
         {isSubmitting ? "Starting..." : "Start Your Assessment"}
-      </Button>
+      </button>
 
-      <p className="text-center text-xs text-muted-foreground">
+      <p style={{ textAlign: "center", fontSize: 12, color: "#555566", margin: 0 }}>
         Your information is confidential.
       </p>
     </form>

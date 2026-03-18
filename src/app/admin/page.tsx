@@ -55,7 +55,7 @@ const PATH_STYLES: Record<string, { bg: string; text: string; border: string }> 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function PathBadge({ label }: { label: string | null }) {
-  if (!label) return <span style={{ color: "#999", fontSize: 13 }}>—</span>
+  if (!label) return <span style={{ color: "#8b8b9a", fontSize: 13 }}>—</span>
 
   if (!KNOWN_PATHS.has(label)) {
     return (
@@ -92,17 +92,17 @@ function SortIcon({ field, sortField, sortDir }: { field: string; sortField: str
 
 function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: number }) {
   return (
-    <Card style={{ border: "1px solid #E5E7EB", background: "#fff", borderRadius: 10 }}>
+    <Card style={{ border: "1px solid rgba(255,255,255,0.08)", background: "#111118", borderRadius: 10 }}>
       <CardContent style={{ display: "flex", alignItems: "center", gap: 14, padding: "20px 20px" }}>
         <div style={{
           width: 38, height: 38, borderRadius: 8, flexShrink: 0,
-          background: "#F0FDF4", display: "flex", alignItems: "center", justifyContent: "center",
+          background: "rgba(76,243,123,0.1)", display: "flex", alignItems: "center", justifyContent: "center",
         }}>
           {icon}
         </div>
         <div>
-          <p style={{ fontSize: 11, color: "#9CA3AF", margin: 0, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.05em" }}>{label}</p>
-          <p style={{ fontSize: 26, fontWeight: 700, color: "#333", margin: 0, lineHeight: 1.2 }}>{value}</p>
+          <p style={{ fontSize: 11, color: "#8b8b9a", margin: 0, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.05em" }}>{label}</p>
+          <p style={{ fontSize: 26, fontWeight: 700, color: "#ffffff", margin: 0, lineHeight: 1.2 }}>{value}</p>
         </div>
       </CardContent>
     </Card>
@@ -248,21 +248,21 @@ export default function AdminPage() {
   // ── Login gate ──────────────────────────────────────────────────────────────
   if (!authenticated) {
     return (
-      <div style={{ minHeight: "100vh", background: "#F9FAFB", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-        <Card style={{ width: "100%", maxWidth: 360, border: "1px solid #E5E7EB", borderRadius: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+      <div style={{ minHeight: "100vh", background: "#0a0a0f", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+        <Card style={{ width: "100%", maxWidth: 360, border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.06)", background: "#111118" }}>
           <CardHeader style={{ textAlign: "center", paddingBottom: 8 }}>
             <div style={{
-              width: 44, height: 44, borderRadius: 10, background: "#333",
+              width: 44, height: 44, borderRadius: 10, background: "#1e1e2a",
               display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px",
             }}>
               <Lock style={{ width: 20, height: 20, color: "#4cf37b" }} />
             </div>
-            <CardTitle style={{ fontSize: 17, fontWeight: 700, color: "#333" }}>Admin Dashboard</CardTitle>
+            <CardTitle style={{ fontSize: 17, fontWeight: 700, color: "#ffffff" }}>Admin Dashboard</CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                <Label htmlFor="password" style={{ fontSize: 13, color: "#555" }}>Password</Label>
+                <Label htmlFor="password" style={{ fontSize: 13, color: "#8b8b9a" }}>Password</Label>
                 <Input
                   id="password"
                   type="password"
@@ -273,11 +273,11 @@ export default function AdminPage() {
                   required
                 />
               </div>
-              {loginError && <p style={{ fontSize: 13, color: "#DC2626", margin: 0 }}>{loginError}</p>}
+              {loginError && <p style={{ fontSize: 13, color: "#f87171", margin: 0 }}>{loginError}</p>}
               <Button
                 type="submit"
                 disabled={loggingIn}
-                style={{ background: "#4cf37b", color: "#333", fontWeight: 700, border: "none" }}
+                style={{ background: "linear-gradient(135deg, #4cf37b 0%, #2dd460 100%)", color: "#0a0a0f", fontWeight: 700, border: "none" }}
               >
                 {loggingIn ? "Logging in…" : "Log In"}
               </Button>
@@ -290,23 +290,23 @@ export default function AdminPage() {
 
   // ── Dashboard ───────────────────────────────────────────────────────────────
   return (
-    <div style={{ minHeight: "100vh", background: "#F9FAFB" }}>
+    <div style={{ minHeight: "100vh", background: "#0a0a0f" }}>
       {/* Top bar */}
-      <div style={{ background: "#333", borderBottom: "1px solid #444", padding: "0 24px" }}>
+      <div style={{ background: "#0a0a0f", borderBottom: "1px solid rgba(255,255,255,0.06)", padding: "0 24px" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", height: 56 }}>
           <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
             <span style={{ fontSize: 13, fontWeight: 700, color: "#4cf37b", letterSpacing: "0.04em", textTransform: "uppercase" }}>
               Untapped Channel Strategy
             </span>
             <span style={{ color: "#666", fontSize: 13 }}>/</span>
-            <span style={{ fontSize: 14, fontWeight: 600, color: "#fff" }}>Assessment Dashboard</span>
+            <span style={{ fontSize: 14, fontWeight: 600, color: "#ffffff" }}>Assessment Dashboard</span>
           </div>
           <button
             onClick={async () => {
               await fetch("/api/admin/logout", { method: "POST" })
               setAuthenticated(false)
             }}
-            style={{ fontSize: 13, color: "#999", background: "none", border: "none", cursor: "pointer", padding: "4px 0" }}
+            style={{ fontSize: 13, color: "#8b8b9a", background: "none", border: "none", cursor: "pointer", padding: "4px 0" }}
           >
             Log out
           </button>
@@ -317,33 +317,33 @@ export default function AdminPage() {
         {/* Stats */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 28 }}>
           <StatCard
-            icon={<Users style={{ width: 18, height: 18, color: "#333" }} />}
+            icon={<Users style={{ width: 18, height: 18, color: "#4cf37b" }} />}
             label="Total Leads"
             value={assessments.length}
           />
           <StatCard
-            icon={<CheckCircle2 style={{ width: 18, height: 18, color: "#333" }} />}
+            icon={<CheckCircle2 style={{ width: 18, height: 18, color: "#4cf37b" }} />}
             label="Completed"
             value={completed.length}
           />
           <StatCard
-            icon={<Calendar style={{ width: 18, height: 18, color: "#333" }} />}
+            icon={<Calendar style={{ width: 18, height: 18, color: "#4cf37b" }} />}
             label="This Week"
             value={weekCount}
           />
         </div>
 
         {/* Table card */}
-        <div style={{ background: "#fff", border: "1px solid #E5E7EB", borderRadius: 10, overflow: "hidden" }}>
+        <div style={{ background: "#111118", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, overflow: "hidden" }}>
           {/* Card header */}
-          <div style={{ padding: "16px 20px", borderBottom: "1px solid #F3F4F6", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <span style={{ fontSize: 15, fontWeight: 700, color: "#333" }}>All Assessments</span>
+          <div style={{ padding: "16px 20px", borderBottom: "1px solid rgba(255,255,255,0.04)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <span style={{ fontSize: 15, fontWeight: 700, color: "#ffffff" }}>All Assessments</span>
             {checkedIds.size > 0 && (
               <button
                 onClick={() => setShowDeleteConfirm(true)}
                 style={{
                   display: "flex", alignItems: "center", gap: 6,
-                  background: "#FEF2F2", color: "#DC2626", border: "1px solid #FECACA",
+                  background: "rgba(220,38,38,0.1)", color: "#f87171", border: "1px solid rgba(220,38,38,0.2)",
                   borderRadius: 6, padding: "6px 12px", fontSize: 13, fontWeight: 600, cursor: "pointer",
                 }}
               >
@@ -356,14 +356,14 @@ export default function AdminPage() {
           {loading ? (
             <div style={{ padding: 32, display: "flex", flexDirection: "column", gap: 8 }}>
               {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} style={{ height: 44, borderRadius: 6, background: "#F3F4F6", animation: "pulse 1.5s infinite" }} />
+                <div key={i} style={{ height: 44, borderRadius: 6, background: "rgba(255,255,255,0.05)", animation: "pulse 1.5s infinite" }} />
               ))}
             </div>
           ) : (
             <div style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                 <thead>
-                  <tr style={{ background: "#FAFAFA", borderBottom: "1px solid #F3F4F6" }}>
+                  <tr style={{ background: "rgba(255,255,255,0.02)", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
                     {/* Select all */}
                     <th style={{ width: 44, padding: "10px 0 10px 16px", textAlign: "center" }}>
                       <input
@@ -392,7 +392,7 @@ export default function AdminPage() {
                         style={{
                           padding: "10px 14px", textAlign: "left",
                           fontSize: 11, fontWeight: 600, textTransform: "uppercase",
-                          letterSpacing: "0.06em", color: "#9CA3AF",
+                          letterSpacing: "0.06em", color: "#8b8b9a",
                           cursor: col.key ? "pointer" : "default",
                           userSelect: "none", whiteSpace: "nowrap",
                         }}
@@ -412,12 +412,12 @@ export default function AdminPage() {
                       <tr
                         key={a.id}
                         style={{
-                          borderBottom: i < sorted.length - 1 ? "1px solid #F9FAFB" : "none",
-                          background: isChecked ? "#F0FDF4" : "transparent",
+                          borderBottom: i < sorted.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none",
+                          background: isChecked ? "rgba(76,243,123,0.06)" : "transparent",
                           transition: "background 0.1s",
                         }}
-                        onMouseEnter={(e) => { if (!isChecked) (e.currentTarget as HTMLTableRowElement).style.background = "#FAFAFA" }}
-                        onMouseLeave={(e) => { (e.currentTarget as HTMLTableRowElement).style.background = isChecked ? "#F0FDF4" : "transparent" }}
+                        onMouseEnter={(e) => { if (!isChecked) (e.currentTarget as HTMLTableRowElement).style.background = "rgba(255,255,255,0.02)" }}
+                        onMouseLeave={(e) => { (e.currentTarget as HTMLTableRowElement).style.background = isChecked ? "rgba(76,243,123,0.06)" : "transparent" }}
                       >
                         <td style={{ padding: "12px 0 12px 16px", textAlign: "center", width: 44 }}>
                           <input
@@ -427,16 +427,16 @@ export default function AdminPage() {
                             style={{ width: 15, height: 15, accentColor: "#4cf37b", cursor: "pointer" }}
                           />
                         </td>
-                        <td style={{ padding: "12px 14px", color: "#9CA3AF", whiteSpace: "nowrap" }}>
+                        <td style={{ padding: "12px 14px", color: "#8b8b9a", whiteSpace: "nowrap" }}>
                           {new Date(a.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                         </td>
-                        <td style={{ padding: "12px 14px", fontWeight: 600, color: "#333", whiteSpace: "nowrap" }}>
+                        <td style={{ padding: "12px 14px", fontWeight: 600, color: "#ffffff", whiteSpace: "nowrap" }}>
                           {a.full_name || "—"}
                         </td>
-                        <td style={{ padding: "12px 14px", color: "#555", whiteSpace: "nowrap" }}>
+                        <td style={{ padding: "12px 14px", color: "#c8c8d4", whiteSpace: "nowrap" }}>
                           {a.company_name || "—"}
                         </td>
-                        <td style={{ padding: "12px 14px", color: "#9CA3AF", whiteSpace: "nowrap" }}>
+                        <td style={{ padding: "12px 14px", color: "#8b8b9a", whiteSpace: "nowrap" }}>
                           {a.title || "—"}
                         </td>
                         <td style={{ padding: "12px 14px" }}>
@@ -454,12 +454,12 @@ export default function AdminPage() {
                         </td>
                         <td style={{ padding: "12px 14px", whiteSpace: "nowrap" }}>
                           {a.completed_at ? (
-                            <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 12, fontWeight: 600, color: "#16A34A" }}>
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 12, fontWeight: 600, color: "#4cf37b" }}>
                               <CheckCircle2 style={{ width: 13, height: 13 }} />
                               Complete
                             </span>
                           ) : (
-                            <span style={{ fontSize: 12, color: "#D1D5DB" }}>Incomplete</span>
+                            <span style={{ fontSize: 12, color: "rgba(255,255,255,0.2)" }}>Incomplete</span>
                           )}
                         </td>
                         <td style={{ padding: "12px 14px" }}>
@@ -467,8 +467,8 @@ export default function AdminPage() {
                             <button
                               onClick={() => setSelected(a)}
                               style={{
-                                fontSize: 12, fontWeight: 600, color: "#333",
-                                background: "#F3F4F6", border: "1px solid #E5E7EB",
+                                fontSize: 12, fontWeight: 600, color: "#ffffff",
+                                background: "#1e1e2a", border: "1px solid rgba(255,255,255,0.1)",
                                 borderRadius: 6, padding: "4px 10px", cursor: "pointer",
                               }}
                             >
@@ -482,7 +482,7 @@ export default function AdminPage() {
                                 style={{
                                   display: "flex", alignItems: "center", justifyContent: "center",
                                   width: 28, height: 28, borderRadius: 6,
-                                  background: "#F3F4F6", border: "1px solid #E5E7EB", color: "#9CA3AF",
+                                  background: "#1e1e2a", border: "1px solid rgba(255,255,255,0.1)", color: "#8b8b9a",
                                 }}
                               >
                                 <ExternalLink style={{ width: 13, height: 13 }} />
@@ -495,7 +495,7 @@ export default function AdminPage() {
                   })}
                   {sorted.length === 0 && (
                     <tr>
-                      <td colSpan={9} style={{ padding: "48px 16px", textAlign: "center", color: "#9CA3AF", fontSize: 14 }}>
+                      <td colSpan={9} style={{ padding: "48px 16px", textAlign: "center", color: "#8b8b9a", fontSize: 14 }}>
                         No assessments yet.
                       </td>
                     </tr>
@@ -509,11 +509,11 @@ export default function AdminPage() {
 
       {/* ── Detail dialog ─────────────────────────────────────────────────────── */}
       <Dialog open={!!selected} onOpenChange={() => setSelected(null)}>
-        <DialogContent className="max-h-[88vh] max-w-[660px] overflow-y-auto">
+        <DialogContent className="max-h-[88vh] max-w-[660px] overflow-y-auto" style={{ background: "#111118", color: "#ffffff" }}>
           {selected && (
             <>
               <DialogHeader>
-                <DialogTitle style={{ fontSize: 18, fontWeight: 700, color: "#333" }}>
+                <DialogTitle style={{ fontSize: 18, fontWeight: 700, color: "#ffffff" }}>
                   {selected.company_name}
                 </DialogTitle>
               </DialogHeader>
@@ -533,50 +533,50 @@ export default function AdminPage() {
                     }] : []),
                   ].map(({ label, value, isEmail, badge }) => (
                     <div key={label}>
-                      <p style={{ fontSize: 11, color: "#9CA3AF", margin: "0 0 3px", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.05em" }}>{label}</p>
+                      <p style={{ fontSize: 11, color: "#8b8b9a", margin: "0 0 3px", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.05em" }}>{label}</p>
                       {badge
                         ? <PathBadge label={selected.path_label} />
                         : isEmail
                           ? <a href={`mailto:${value}`} style={{ fontSize: 14, fontWeight: 500, color: "#4cf37b", textDecoration: "none" }}>{value}</a>
-                          : <p style={{ fontSize: 14, fontWeight: 500, color: "#333", margin: 0 }}>{value as string}</p>
+                          : <p style={{ fontSize: 14, fontWeight: 500, color: "#ffffff", margin: 0 }}>{value as string}</p>
                       }
                     </div>
                   ))}
                 </div>
 
                 {/* Divider */}
-                <div style={{ borderTop: "1px solid #F3F4F6" }} />
+                <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }} />
 
                 {/* Open text */}
                 {selected.open_text && (
                   <>
                     <div>
-                      <p style={{ fontSize: 11, color: "#9CA3AF", margin: "0 0 10px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                      <p style={{ fontSize: 11, color: "#8b8b9a", margin: "0 0 10px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>
                         Additional Context
                       </p>
-                      <div style={{ background: "#FAFAFA", border: "1px solid #E5E7EB", borderRadius: 8, padding: "16px 18px" }}>
-                        <p style={{ whiteSpace: "pre-wrap", fontSize: 14, lineHeight: 1.7, color: "#333", margin: 0 }}>
+                      <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 8, padding: "16px 18px" }}>
+                        <p style={{ whiteSpace: "pre-wrap", fontSize: 14, lineHeight: 1.7, color: "#ffffff", margin: 0 }}>
                           {selected.open_text}
                         </p>
                       </div>
                     </div>
-                    <div style={{ borderTop: "1px solid #F3F4F6" }} />
+                    <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }} />
                   </>
                 )}
 
                 {/* AI Output */}
                 <div>
-                  <p style={{ fontSize: 11, color: "#9CA3AF", margin: "0 0 10px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                  <p style={{ fontSize: 11, color: "#8b8b9a", margin: "0 0 10px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>
                     AI Diagnosis
                   </p>
                   {selected.ai_output ? (
-                    <div style={{ background: "#FAFAFA", border: "1px solid #E5E7EB", borderRadius: 8, padding: "16px 18px" }}>
-                      <p style={{ whiteSpace: "pre-wrap", fontSize: 14, lineHeight: 1.7, color: "#333", margin: 0 }}>
+                    <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 8, padding: "16px 18px" }}>
+                      <p style={{ whiteSpace: "pre-wrap", fontSize: 14, lineHeight: 1.7, color: "#ffffff", margin: 0 }}>
                         {selected.ai_output}
                       </p>
                     </div>
                   ) : (
-                    <div style={{ background: "#FAFAFA", border: "1px solid #E5E7EB", borderRadius: 8, padding: "14px 16px", fontSize: 13, color: "#9CA3AF" }}>
+                    <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 8, padding: "14px 16px", fontSize: 13, color: "#8b8b9a" }}>
                       {selected.completed_at
                         ? "AI output not yet generated — open the results page to trigger generation."
                         : "Assessment not yet completed."}
@@ -592,7 +592,7 @@ export default function AdminPage() {
                     rel="noopener noreferrer"
                     style={{
                       display: "inline-flex", alignItems: "center", gap: 8, alignSelf: "flex-start",
-                      background: "#4cf37b", color: "#333",
+                      background: "#4cf37b", color: "#0a0a0f",
                       fontSize: 13, fontWeight: 700, textDecoration: "none",
                       padding: "10px 18px", borderRadius: 7,
                     }}
@@ -609,27 +609,27 @@ export default function AdminPage() {
 
       {/* ── Delete confirmation dialog ────────────────────────────────────────── */}
       <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-        <DialogContent style={{ maxWidth: 400 }}>
+        <DialogContent style={{ maxWidth: 400, background: "#111118", color: "#ffffff" }}>
           <DialogHeader>
-            <DialogTitle style={{ display: "flex", alignItems: "center", gap: 8, color: "#333" }}>
+            <DialogTitle style={{ display: "flex", alignItems: "center", gap: 8, color: "#ffffff" }}>
               <AlertTriangle style={{ width: 18, height: 18, color: "#DC2626" }} />
               Confirm Deletion
             </DialogTitle>
           </DialogHeader>
-          <p style={{ fontSize: 14, color: "#555", margin: "4px 0 20px" }}>
+          <p style={{ fontSize: 14, color: "#c8c8d4", margin: "4px 0 20px" }}>
             Delete <strong>{checkedIds.size}</strong> assessment{checkedIds.size !== 1 ? "s" : ""}? This cannot be undone.
           </p>
           <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
             <button
               onClick={() => setShowDeleteConfirm(false)}
-              style={{ fontSize: 13, fontWeight: 600, color: "#555", background: "#F3F4F6", border: "1px solid #E5E7EB", borderRadius: 6, padding: "8px 16px", cursor: "pointer" }}
+              style={{ fontSize: 13, fontWeight: 600, color: "#c8c8d4", background: "#1e1e2a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "8px 16px", cursor: "pointer" }}
             >
               Cancel
             </button>
             <button
               onClick={handleDeleteConfirmed}
               disabled={deleting}
-              style={{ fontSize: 13, fontWeight: 700, color: "#fff", background: "#DC2626", border: "none", borderRadius: 6, padding: "8px 16px", cursor: "pointer", opacity: deleting ? 0.6 : 1 }}
+              style={{ fontSize: 13, fontWeight: 700, color: "#f87171", background: "rgba(220,38,38,0.1)", border: "1px solid rgba(220,38,38,0.2)", borderRadius: 6, padding: "8px 16px", cursor: "pointer", opacity: deleting ? 0.6 : 1 }}
             >
               {deleting ? "Deleting…" : `Delete ${checkedIds.size}`}
             </button>
