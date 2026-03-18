@@ -13,7 +13,7 @@ export function Header({ rightContent }: { rightContent?: React.ReactNode }) {
       <div className="relative flex items-center justify-center px-6 py-5">
         <div className="relative h-[60px] w-[275px] sm:h-[70px] sm:w-[325px]">
           <Image
-            src="/images/logo-main.svg"
+            src="/images/Untapped Channel Inverted Color Transparent bg.svg"
             alt="Untapped Channel"
             fill
             style={{ objectFit: "contain", objectPosition: "left center" }}
