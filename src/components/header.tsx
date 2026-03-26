@@ -5,7 +5,7 @@ export function Header({ rightContent }: { rightContent?: React.ReactNode }) {
     <header
       className="relative z-10"
       style={{
-        background: "rgba(10,10,15,0.8)",
+        background: "rgba(17,17,17,0.8)",
         borderBottom: "1px solid rgba(255,255,255,0.06)",
         backdropFilter: "blur(12px)",
       }}
@@ -13,7 +13,7 @@ export function Header({ rightContent }: { rightContent?: React.ReactNode }) {
       <div className="relative flex items-center justify-center px-6 py-5">
         <div className="relative h-[60px] w-[275px] sm:h-[70px] sm:w-[325px]">
           <Image
-            src="/images/Untapped Channel Inverted Color Transparent bg.svg"
+            src="/logo-inverted.svg"
             alt="Untapped Channel"
             fill
             style={{ objectFit: "contain", objectPosition: "left center" }}

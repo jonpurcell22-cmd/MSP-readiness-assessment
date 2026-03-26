@@ -7,16 +7,20 @@ import fs from "fs";
 import path from "path";
 import sharp from "sharp";
 
-const IMAGES_DIR = path.join(process.cwd(), "public", "images");
+const PUBLIC_DIR = path.join(process.cwd(), "public");
+const IMAGES_DIR = path.join(PUBLIC_DIR, "images");
 
-const MAIN_SVG = "Untapped Channel Main Logo Transparent bg.svg";
-const MAIN_PNG = "Untapped Channel Main Logo.png";
-const SYMBOL_SVG = "Untapped Channel Logo Symbol Transparent bg.svg";
-const SYMBOL_PNG = "Untapped Channel Logo Symbol.png";
+const MAIN_SVG_PREFERRED = "logo-inverted.svg";
+const MAIN_SVG_FALLBACK = "Untapped Channel Main Logo Transparent bg.svg";
+const MAIN_PNG_FALLBACK = "Untapped Channel Main Logo.png";
 
-function loadPngDataUri(filename: string): string | undefined {
+const SYMBOL_SVG_PREFERRED = "logo-inverted.svg";
+const SYMBOL_SVG_FALLBACK = "Untapped Channel Logo Symbol Transparent bg.svg";
+const SYMBOL_PNG_FALLBACK = "Untapped Channel Logo Symbol.png";
+
+function loadPngDataUriFromDir(dir: string, filename: string): string | undefined {
   try {
-    const filePath = path.join(IMAGES_DIR, filename);
+    const filePath = path.join(dir, filename);
     if (fs.existsSync(filePath)) {
       const buf = fs.readFileSync(filePath);
       return `data:image/png;base64,${buf.toString("base64")}`;
@@ -27,9 +31,9 @@ function loadPngDataUri(filename: string): string | undefined {
   return undefined;
 }
 
-async function loadSvgAsPngDataUri(filename: string): Promise<string | undefined> {
+async function loadSvgAsPngDataUriFromDir(dir: string, filename: string): Promise<string | undefined> {
   try {
-    const filePath = path.join(IMAGES_DIR, filename);
+    const filePath = path.join(dir, filename);
     if (!fs.existsSync(filePath)) return undefined;
     const buf = await sharp(filePath)
       .png()
@@ -44,8 +48,15 @@ let _logoMain: string | undefined;
 let _logoSymbol: string | undefined;
 
 async function initLogos(): Promise<void> {
-  _logoMain = await loadSvgAsPngDataUri(MAIN_SVG) ?? loadPngDataUri(MAIN_PNG);
-  _logoSymbol = await loadSvgAsPngDataUri(SYMBOL_SVG) ?? loadPngDataUri(SYMBOL_PNG);
+  _logoMain =
+    (await loadSvgAsPngDataUriFromDir(PUBLIC_DIR, MAIN_SVG_PREFERRED)) ??
+    (await loadSvgAsPngDataUriFromDir(IMAGES_DIR, MAIN_SVG_FALLBACK)) ??
+    loadPngDataUriFromDir(IMAGES_DIR, MAIN_PNG_FALLBACK);
+
+  _logoSymbol =
+    (await loadSvgAsPngDataUriFromDir(PUBLIC_DIR, SYMBOL_SVG_PREFERRED)) ??
+    (await loadSvgAsPngDataUriFromDir(IMAGES_DIR, SYMBOL_SVG_FALLBACK)) ??
+    loadPngDataUriFromDir(IMAGES_DIR, SYMBOL_PNG_FALLBACK);
 }
 
 const logosPromise = initLogos();

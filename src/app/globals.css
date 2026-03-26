@@ -4,23 +4,23 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --background: #0a0a0f;
+  --background: #111111;
   --foreground: #ffffff;
-  --card: #111118;
+  --card: #222222;
   --card-foreground: #ffffff;
   --popover: #111118;
   --popover-foreground: #ffffff;
   --primary: #4cf37b;
   --primary-foreground: #0a0a0f;
-  --secondary: #1a1a24;
+  --secondary: #1A2E22;
   --secondary-foreground: #ffffff;
-  --muted: #1a1a24;
-  --muted-foreground: #8b8b9a;
+  --muted: #1A2E22;
+  --muted-foreground: #888888;
   --accent: #1a1a24;
   --accent-foreground: #ffffff;
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: #ffffff;
-  --border: #1e1e2a;
+  --border: #2A2A2A;
   --input: #1a1a24;
   --ring: #4cf37b;
   --chart-1: #4cf37b;
@@ -35,7 +35,8 @@
 }
 
 @theme inline {
-  --font-sans: 'Inter', 'Inter Fallback';
+  --font-sans: 'Raleway', 'Raleway Fallback';
+  --font-body: 'Lato', 'Lato Fallback';
   --font-mono: 'Geist Mono', 'Geist Mono Fallback';
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -91,7 +92,7 @@
 
 /* Dark card with glow */
 .card-dark {
-  background: #111118;
+  background: #222222;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 20px;
   box-shadow:
@@ -105,7 +106,7 @@
   background: linear-gradient(135deg, #4cf37b 0%, #2dd460 100%);
   color: #0a0a0f;
   font-weight: 600;
-  border-radius: 12px;
+  border-radius: 16px;
   box-shadow: 0 0 20px rgba(76, 243, 123, 0.3), 0 4px 15px rgba(0, 0, 0, 0.3);
   transition: box-shadow 0.2s ease, transform 0.2s ease;
 }
