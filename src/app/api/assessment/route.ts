@@ -1,122 +1,103 @@
-import { NextResponse } from "next/server";
-import { getServerSupabase } from "@/lib/supabase";
-import type { Database } from "@/types/supabase";
-import { sendLeadNotificationEmail } from "@/lib/lead-notification";
+import { NextResponse } from "next/server"
+import { getServerSupabase } from "@/lib/supabase"
+import { sendLeadNotificationEmail, sendUserResultsEmail } from "@/lib/lead-notification"
+import {
+  calculateRawScore,
+  rescaleScore,
+  getMaturityLabel,
+  calculateDimensionScore,
+} from "@/data/questions"
+import type { AssessmentContact, AssessmentAnswers, AssessmentScores } from "@/types/assessment"
 
-/** Body from the "Begin Your Assessment" lead capture form. */
-export interface StartAssessmentBody {
-  contact_name: string;
-  email: string;
-  phone?: string | null;
-  title?: string | null;
-  company_name: string;
-  company_website?: string | null;
-  product_category?: string | null;
-  current_revenue?: unknown;
+interface PostBody {
+  contact: AssessmentContact
+  answers: AssessmentAnswers
+  points: Record<string, number>
 }
 
-type AssessmentInsert = Database["public"]["Tables"]["assessments"]["Insert"];
-
-function startBodyToRow(body: StartAssessmentBody): AssessmentInsert {
-  return {
-    full_name: body.contact_name,
-    email: body.email,
-    phone: body.phone ?? "",
-    title: body.title ?? "",
-    company_name: body.company_name,
-    company_website: body.company_website ?? null,
-    product_category: body.product_category ?? "Other",
-
-    arr: null,
-    acv: null,
-    customer_count: null,
-    direct_revenue_pct: null,
-    sales_cycle_days: null,
-    cac: null,
-    existing_msp_relationships: null,
-
-    section_1_scores: null,
-    section_2_scores: null,
-    section_3_scores: null,
-    section_4_scores: null,
-    section_5_scores: null,
-    section_6_scores: null,
-    section_7_scores: null,
-    section_7_skipped: false,
-
-    section_1_total: null,
-    section_2_total: null,
-    section_3_total: null,
-    section_4_total: null,
-    section_5_total: null,
-    section_6_total: null,
-    section_7_total: null,
-    overall_score: null,
-    readiness_tier: null,
-    red_flags: null,
-
-    pdf_url: null,
-    ai_narrative: null,
-  };
-}
-
-/** POST: create a new assessment from the lead capture form; returns { id }. */
+/** POST: create a new assessment; returns { id }. */
 export async function POST(request: Request) {
   try {
-    const body = (await request.json()) as StartAssessmentBody;
+    const body = (await request.json()) as PostBody
 
-    if (!body.contact_name?.trim() || !body.email?.trim() || !body.company_name?.trim()) {
+    if (!body.contact?.firstName?.trim() || !body.contact?.lastName?.trim() || !body.contact?.email?.trim()) {
       return NextResponse.json(
-        { error: "Missing required fields: contact_name, email, company_name" },
+        { error: "Missing required fields: firstName, lastName, email" },
         { status: 400 }
-      );
+      )
     }
 
-    let supabase;
+    let supabase
     try {
-      supabase = getServerSupabase();
+      supabase = getServerSupabase()
     } catch (e) {
-      console.error("Supabase config error:", e);
+      console.error("Supabase config error:", e)
       return NextResponse.json(
         { error: "Server is not configured. Set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in .env." },
         { status: 503 }
-      );
+      )
     }
 
-    const row = startBodyToRow(body);
+    // Recalculate scores server-side -- do not trust client scores
+    const raw = calculateRawScore(body.points)
+    const overall = rescaleScore(raw)
+    const arch = calculateDimensionScore(body.points, "arch")
+    const gtm = calculateDimensionScore(body.points, "gtm")
+    const px = calculateDimensionScore(body.points, "px")
+    const maturityLabel = getMaturityLabel(overall)
+
+    const scores: AssessmentScores = { overall, arch, gtm, px, maturityLabel }
+
+    const row = {
+      first_name: body.contact.firstName.trim(),
+      last_name: body.contact.lastName.trim(),
+      email: body.contact.email.trim(),
+      vertical: body.contact.vertical ?? null,
+      company_size: body.contact.companySize ?? null,
+      answers: body.answers,
+      scores,
+      output: null,
+    }
 
     const { data: rawData, error } = await supabase
       .from("assessments")
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase insert inference
-      .insert(row as any)
+      .insert(row as never)
       .select("id, created_at")
-      .single();
+      .single()
 
-    const data = rawData as { id: string; created_at: string } | null;
+    const data = rawData as { id: string; created_at: string } | null
 
     if (error || !data) {
-      console.error("Assessment create error:", error);
+      console.error("Assessment create error:", error)
       return NextResponse.json(
         { error: error?.message ?? "Failed to create assessment" },
         { status: 500 }
-      );
+      )
     }
 
     // Fire-and-forget: notify admin of new lead
     void sendLeadNotificationEmail({
       assessmentId: data.id,
-      fullName: body.contact_name?.trim() ?? "",
-      email: body.email?.trim() ?? "",
-      companyName: body.company_name?.trim() ?? "",
-      title: body.title ?? undefined,
-    }).catch(() => {});
+      fullName: `${body.contact.firstName.trim()} ${body.contact.lastName.trim()}`,
+      email: body.contact.email.trim(),
+      companyName: "",
+    }).catch(() => {})
 
-    return NextResponse.json({ id: data.id, created_at: data.created_at });
+    // Fire-and-forget: send results link to the submitter
+    void sendUserResultsEmail({
+      assessmentId: data.id,
+      firstName: body.contact.firstName.trim(),
+      email: body.contact.email.trim(),
+      maturityLabel: scores.maturityLabel,
+      overallScore: scores.overall,
+    }).catch(() => {})
+
+    return NextResponse.json({ id: data.id })
   } catch (e) {
-    console.error("Assessment API error:", e);
+    console.error("Assessment API error:", e)
     return NextResponse.json(
       { error: e instanceof Error ? e.message : "Internal server error" },
       { status: 500 }
-    );
+    )
   }
 }
