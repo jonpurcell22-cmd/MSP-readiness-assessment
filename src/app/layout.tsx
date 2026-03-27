@@ -4,7 +4,16 @@ import './globals.css'
 export const metadata: Metadata = {
   title: 'MSP Channel Readiness Assessment | Untapped Channel Strategy',
   description: 'Evaluate your readiness to build a profitable MSP channel program. Get a personalized scorecard, competitive analysis, and financial projections.',
-  icons: { icon: '/favicon.ico' },
+  manifest: "/site.webmanifest",
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/favicon-32x32.png", type: "image/png", sizes: "32x32" },
+      { url: "/favicon-16x16.png", type: "image/png", sizes: "16x16" },
+    ],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
+    shortcut: ["/favicon.ico"],
+  },
   verification: {
     google: 'J_vJM_47xfzNlD-ZEeKHiGFkgbymd3hCYJf6dc8-EzM',
   },
