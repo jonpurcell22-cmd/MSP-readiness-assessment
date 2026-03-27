@@ -234,15 +234,15 @@ export default function LandingPage() {
       {/* Hero */}
       <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "80px 0 60px", scrollSnapAlign: "start" }}>
         <div style={{ maxWidth: 560, width: "100%", textAlign: "center" }}>
-          <p style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em", color: "#8b8b9a", marginBottom: 20, fontFamily: "'Raleway', sans-serif" }}>
+          <p style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.28em", color: "#8b8b9a", marginBottom: 20, fontFamily: "'Raleway', sans-serif" }}>
             Untapped Channel Strategy
           </p>
-          <h1 style={{ fontSize: 36, fontWeight: 700, color: "#ffffff", letterSpacing: "-0.02em", lineHeight: 1.15, marginBottom: 16, fontFamily: "'Raleway', sans-serif" }}>
+          <h1 className="hero-heading" style={{ color: "#ffffff", marginBottom: 20 }}>
             MSP Channel{" "}
             <span style={{ color: "#4cf37b" }}>Readiness</span>{" "}
             Assessment
           </h1>
-          <p style={{ color: "#8b8b9a", fontSize: 16, lineHeight: 1.6, maxWidth: 440, margin: "0 auto 40px", fontFamily: "'Lato', sans-serif" }}>
+          <p style={{ color: "#8b8b9a", fontSize: 17, lineHeight: 1.7, maxWidth: 440, margin: "0 auto 40px", fontFamily: "'Lato', sans-serif" }}>
             7 questions. A direct diagnosis of your MSP channel maturity from an expert who has built programs at Apple and VMware.
           </p>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 20 }}>
@@ -299,10 +299,10 @@ export default function LandingPage() {
                   transition: "opacity 0.3s ease",
                 }}
               >
-                <p style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", color: "#8b8b9a", margin: "0 0 12px", fontFamily: "'Raleway', sans-serif" }}>
+                <p style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.28em", color: "#8b8b9a", margin: "0 0 12px", fontFamily: "'Raleway', sans-serif" }}>
                   Question {qi + 1} of {QUESTIONS.length}
                 </p>
-                <h2 style={{ fontSize: 18, fontWeight: 700, color: "#ffffff", lineHeight: 1.4, margin: "0 0 24px", fontFamily: "'Raleway', sans-serif" }}>
+                <h2 style={{ fontSize: 22, fontWeight: 700, color: "#ffffff", lineHeight: 1.4, margin: "0 0 24px", fontFamily: "'Raleway', sans-serif" }}>
                   {question.text}
                 </h2>
 
@@ -338,7 +338,7 @@ export default function LandingPage() {
                           }
                         }}
                       >
-                        <span style={{ fontSize: 14, fontWeight: 500, color: isSelected ? "#ffffff" : "#c8c8d4", lineHeight: 1.6, display: "block" }}>
+                        <span style={{ fontSize: 15, fontWeight: 500, color: isSelected ? "#ffffff" : "#c8c8d4", lineHeight: 1.6, display: "block" }}>
                           {option.text}
                         </span>
                       </button>

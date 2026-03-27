@@ -122,10 +122,10 @@ export function ResultsContent({
 
           {/* Header */}
           <div>
-            <p style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", color: "#8b8b9a", margin: "0 0 12px", fontFamily: "'Raleway', sans-serif" }}>
+            <p style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.28em", color: "#8b8b9a", margin: "0 0 12px", fontFamily: "'Raleway', sans-serif" }}>
               Your MSP Channel Scorecard
             </p>
-            <h1 style={{ fontSize: 28, fontWeight: 800, color: "#ffffff", letterSpacing: "-0.02em", lineHeight: 1.2, margin: "0 0 16px", fontFamily: "'Raleway', sans-serif" }}>
+            <h1 style={{ fontSize: 36, fontWeight: 800, color: "#ffffff", letterSpacing: "-0.02em", lineHeight: 1.1, margin: "0 0 16px", fontFamily: "'Raleway', sans-serif" }}>
               {firstName ? `Here's your diagnosis, ${firstName}.` : "Here's your diagnosis."}
             </h1>
             {scores && (
@@ -163,7 +163,7 @@ export function ResultsContent({
               <p style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", color: "#4cf37b", margin: "0 0 12px", fontFamily: "'Raleway', sans-serif" }}>
                 Priority Focus
               </p>
-              <p style={{ fontSize: 18, fontWeight: 600, color: "#ffffff", margin: 0, lineHeight: 1.5, fontFamily: "'Raleway', sans-serif" }}>
+              <p style={{ fontSize: 20, fontWeight: 600, color: "#ffffff", margin: 0, lineHeight: 1.5, fontFamily: "'Raleway', sans-serif" }}>
                 {output.priority_focus}
               </p>
             </div>
@@ -187,7 +187,7 @@ export function ResultsContent({
           <div style={{ width: "100%", maxWidth: CARD_MAX, display: "flex", flexDirection: "column", gap: 24 }}>
             <div className="card-dark" style={{ padding: "32px 28px", borderLeft: "3px solid #4cf37b" }}>
               <div style={{ marginBottom: 24 }}>
-                <p style={{ fontSize: 18, fontWeight: 700, color: "#ffffff", margin: "0 0 6px", fontFamily: "'Raleway', sans-serif" }}>
+                <p style={{ fontSize: 20, fontWeight: 700, color: "#ffffff", margin: "0 0 6px", fontFamily: "'Raleway', sans-serif" }}>
                   Where Your Program Stands
                 </p>
                 <p style={{ fontSize: 13, color: "#999999", margin: 0, fontFamily: "'Lato', sans-serif", lineHeight: 1.5 }}>
@@ -261,7 +261,7 @@ export function ResultsContent({
                   <p
                     key={i}
                     style={{
-                      fontSize: 15,
+                      fontSize: 16,
                       lineHeight: 1.75,
                       color: "#d4d4e0",
                       margin: i > 0 ? "16px 0 0" : "0",
@@ -302,10 +302,10 @@ export function ResultsContent({
               border: "1px solid rgba(76, 243, 123, 0.3)",
               borderRadius: 16,
             }}>
-              <h2 style={{ fontSize: 20, fontWeight: 700, color: "#ffffff", letterSpacing: "-0.02em", margin: "0 0 10px", fontFamily: "'Raleway', sans-serif" }}>
+              <h2 style={{ fontSize: 24, fontWeight: 700, color: "#ffffff", letterSpacing: "-0.02em", margin: "0 0 10px", fontFamily: "'Raleway', sans-serif" }}>
                 Ready to turn this diagnosis into a plan?
               </h2>
-              <p style={{ fontSize: 14, color: "#8b8b9a", lineHeight: 1.6, maxWidth: 380, margin: "0 auto 28px", fontFamily: "'Lato', sans-serif" }}>
+              <p style={{ fontSize: 16, color: "#8b8b9a", lineHeight: 1.6, maxWidth: 380, margin: "0 auto 28px", fontFamily: "'Lato', sans-serif" }}>
                 Book a free 90-minute deep-dive with an MSP channel expert. No cost, no obligation.
               </p>
               <a
