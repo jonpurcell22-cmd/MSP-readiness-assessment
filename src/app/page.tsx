@@ -243,7 +243,9 @@ export default function LandingPage() {
             Assessment
           </h1>
           <p style={{ color: "#8b8b9a", fontSize: 17, lineHeight: 1.7, maxWidth: 440, margin: "0 auto 40px", fontFamily: "'Lato', sans-serif" }}>
-            7 questions. A direct diagnosis of your MSP channel maturity from an expert who has built programs at Apple and VMware.
+            7 questions.<br />
+            A direct diagnosis of your MSP channel maturity from an expert who has built programs at<br />
+            <span style={{ color: "#ffffff", fontWeight: 600 }}>Apple and VMware.</span>
           </p>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 20 }}>
             <button
