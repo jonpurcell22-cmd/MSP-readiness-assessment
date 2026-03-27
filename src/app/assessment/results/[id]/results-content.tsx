@@ -122,7 +122,7 @@ export function ResultsContent({
 
           {/* Header */}
           <div>
-            <p style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.28em", color: "#8b8b9a", margin: "0 0 12px", fontFamily: "'Raleway', sans-serif" }}>
+            <p style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", color: "#8b8b9a", margin: "0 0 12px", fontFamily: "'Raleway', sans-serif" }}>
               Your MSP Channel Scorecard
             </p>
             <h1 style={{ fontSize: 36, fontWeight: 800, color: "#ffffff", letterSpacing: "-0.02em", lineHeight: 1.1, margin: "0 0 16px", fontFamily: "'Raleway', sans-serif" }}>

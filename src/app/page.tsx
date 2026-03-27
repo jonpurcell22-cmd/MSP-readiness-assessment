@@ -234,10 +234,10 @@ export default function LandingPage() {
       {/* Hero */}
       <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "80px 0 60px", scrollSnapAlign: "start" }}>
         <div style={{ maxWidth: 560, width: "100%", textAlign: "center" }}>
-          <p style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.28em", color: "#8b8b9a", marginBottom: 20, fontFamily: "'Raleway', sans-serif" }}>
+          <p style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", color: "#8b8b9a", marginBottom: 20, fontFamily: "'Raleway', sans-serif" }}>
             Untapped Channel Strategy
           </p>
-          <h1 className="hero-heading" style={{ color: "#ffffff", marginBottom: 20 }}>
+          <h1 className="text-4xl md:text-6xl" style={{ fontWeight: 800, color: "#ffffff", letterSpacing: "-0.02em", lineHeight: 1.05, marginBottom: 20, fontFamily: "'Raleway', sans-serif" }}>
             MSP Channel{" "}
             <span style={{ color: "#4cf37b" }}>Readiness</span>{" "}
             Assessment
@@ -299,7 +299,7 @@ export default function LandingPage() {
                   transition: "opacity 0.3s ease",
                 }}
               >
-                <p style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.28em", color: "#8b8b9a", margin: "0 0 12px", fontFamily: "'Raleway', sans-serif" }}>
+                <p style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", color: "#8b8b9a", margin: "0 0 12px", fontFamily: "'Raleway', sans-serif" }}>
                   Question {qi + 1} of {QUESTIONS.length}
                 </p>
                 <h2 style={{ fontSize: 22, fontWeight: 700, color: "#ffffff", lineHeight: 1.4, margin: "0 0 24px", fontFamily: "'Raleway', sans-serif" }}>
