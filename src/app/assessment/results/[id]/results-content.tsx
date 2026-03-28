@@ -169,6 +169,29 @@ export function ResultsContent({
             </div>
           )}
 
+          {/* Recommended Service */}
+          {output?.recommended_service && (
+            <div style={{
+              padding: "24px 32px",
+              background: "rgba(76, 243, 123, 0.06)",
+              border: "1px solid rgba(76, 243, 123, 0.2)",
+              borderRadius: 12,
+              display: "flex",
+              flexDirection: "column",
+              gap: 8,
+            }}>
+              <p style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", color: "#4cf37b", margin: 0, fontFamily: "'Raleway', sans-serif" }}>
+                Recommended Next Step
+              </p>
+              <p style={{ fontSize: 18, fontWeight: 700, color: "#ffffff", margin: 0, fontFamily: "'Raleway', sans-serif" }}>
+                {output.recommended_service.name}
+              </p>
+              <p style={{ fontSize: 14, color: "#8b8b9a", margin: 0, lineHeight: 1.6, fontFamily: "'Lato', sans-serif" }}>
+                {output.recommended_service.rationale}
+              </p>
+            </div>
+          )}
+
           {/* Down arrow */}
           {output && (
             <div style={{ display: "flex", justifyContent: "center", paddingTop: 8 }}>

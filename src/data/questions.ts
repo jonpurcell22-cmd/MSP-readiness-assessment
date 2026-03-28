@@ -200,3 +200,65 @@ export function calculateDimensionScore(
   )
   return Math.round((raw / maxRaw) * 100)
 }
+
+export interface ServiceRecommendation {
+  name: string
+  rationale: string
+}
+
+export function recommendService(
+  answers: Record<string, number>,
+  scores: { overall: number; arch: number; gtm: number; px: number }
+): ServiceRecommendation {
+  const { overall, arch, gtm, px } = scores
+  const q1 = answers.q1 ?? 0
+  const q3 = answers.q3 ?? 0
+  const q7 = answers.q7 ?? 0
+
+  if (overall <= 39) {
+    return {
+      name: "Strategic Advisory",
+      rationale: "Your program needs foundational work before a build engagement will produce results. Strategic Advisory gives you expert guidance to close the right gaps first.",
+    }
+  }
+
+  if (q1 === 3 && arch <= gtm && arch <= px) {
+    return {
+      name: "MSP Pricing & Packaging",
+      rationale: "Your pricing model is the primary barrier. MSPs cannot build a practice around economics that were not designed for them. Fix the math before anything else.",
+    }
+  }
+
+  if (overall >= 85) {
+    return {
+      name: "Strategic Advisory",
+      rationale: "Your program is operating at a high level. Strategic Advisory keeps an expert in your corner as you scale without the overhead of a full fractional engagement.",
+    }
+  }
+
+  if (q3 === 5) {
+    return {
+      name: "Channel Conflict Resolution",
+      rationale: "Your direct sales team has no reason to support the channel and every reason to undermine it. Until compensation and deal registration are aligned, no partner program will hold.",
+    }
+  }
+
+  if (q7 === 3 && overall >= 55) {
+    return {
+      name: "Distributor Readiness",
+      rationale: "Your product and org are ready, but you have no distribution footprint. Getting listed with Pax8, Ingram Cloud, or TD SYNNEX is the fastest path to the partner base you need.",
+    }
+  }
+
+  if (overall >= 70) {
+    return {
+      name: "MSP Program Audit & Fix",
+      rationale: "You have a program running but specific gaps are limiting performance. An audit identifies exactly what is broken and rebuilds the components that are holding you back.",
+    }
+  }
+
+  return {
+    name: "Fractional MSP Channel Leader",
+    rationale: "You have the foundation to build a real MSP program. A fractional channel leader designs, builds, and launches it without the cost or timeline of a full-time hire.",
+  }
+}

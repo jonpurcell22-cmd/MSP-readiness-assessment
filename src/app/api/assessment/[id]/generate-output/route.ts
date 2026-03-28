@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { generateAssessmentOutput } from "@/lib/generate-output"
+import { recommendService } from "@/data/questions"
 import type { AssessmentAnswers, AssessmentScores, AssessmentOutput } from "@/types/assessment"
 
 export const maxDuration = 120
@@ -59,10 +60,15 @@ export async function POST(
   // Generate
   console.log("[generate-output] calling Claude...")
   try {
+    const points = Object.fromEntries(
+      Object.entries(assessment.answers).map(([k, v]) => [k, Number(v)])
+    )
+    const service = recommendService(points, assessment.scores)
     const output = await generateAssessmentOutput(
       assessment.first_name,
       assessment.scores,
       assessment.answers,
+      service,
       assessment.vertical ?? undefined,
       assessment.company_size ?? undefined
     )

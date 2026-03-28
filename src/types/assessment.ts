@@ -38,6 +38,10 @@ export interface AssessmentScores {
 export interface AssessmentOutput {
   priority_focus: string
   narrative: string
+  recommended_service: {
+    name: string
+    rationale: string
+  }
 }
 
 // Supabase database row

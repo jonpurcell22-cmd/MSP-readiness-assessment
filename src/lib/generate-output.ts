@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk"
 import type { AssessmentAnswers, AssessmentScores, AssessmentOutput } from "@/types/assessment"
+import type { ServiceRecommendation } from "@/data/questions"
 
 const client = new Anthropic()
 
@@ -9,6 +10,7 @@ function buildPrompt(
   firstName: string,
   scores: AssessmentScores,
   answers: AssessmentAnswers,
+  service: ServiceRecommendation,
   vertical?: string,
   companySize?: string
 ): string {
@@ -183,11 +185,24 @@ The next conversation is not about fixing the program -- it is about deciding ho
 
 ---
 
-OUTPUTS -- return as a single JSON object with exactly two fields. No markdown. No code fences. Raw JSON only.
+RECOMMENDED SERVICE
+
+Based on the scoring logic, this vendor has been matched to the following service. Do not change it. Reproduce it exactly in the output JSON.
+
+Service name: ${service.name}
+Service rationale: ${service.rationale}
+
+---
+
+OUTPUTS -- return as a single JSON object with exactly three fields. No markdown. No code fences. Raw JSON only.
 
 {
   "priority_focus": "One sentence. The single most important thing this vendor needs to address. Direct statement, no hedging, no qualifiers. Maximum 20 words. Stands completely alone.",
-  "narrative": "The full 400-500 word diagnostic. Begins with respondent first name as standalone element. No subheadings. No bullets."
+  "narrative": "The full 400-500 word diagnostic. Begins with respondent first name as standalone element. No subheadings. No bullets.",
+  "recommended_service": {
+    "name": "Reproduce the service name exactly as given above.",
+    "rationale": "Reproduce the service rationale exactly as given above."
+  }
 }
 `
 }
@@ -196,6 +211,7 @@ export async function generateAssessmentOutput(
   firstName: string,
   scores: AssessmentScores,
   answers: AssessmentAnswers,
+  service: ServiceRecommendation,
   vertical?: string,
   companySize?: string
 ): Promise<AssessmentOutput> {
@@ -206,7 +222,7 @@ export async function generateAssessmentOutput(
     messages: [
       {
         role: "user",
-        content: buildPrompt(firstName, scores, answers, vertical, companySize),
+        content: buildPrompt(firstName, scores, answers, service, vertical, companySize),
       },
     ],
   })
