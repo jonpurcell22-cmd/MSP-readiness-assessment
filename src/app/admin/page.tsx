@@ -128,6 +128,11 @@ export default function AdminPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleting, setDeleting] = useState(false)
 
+  const [simulating, setSimulating] = useState(false)
+  const [simStatus, setSimStatus] = useState<string | null>(null)
+  const [simError, setSimError] = useState<string | null>(null)
+  const [simResultUrl, setSimResultUrl] = useState<string | null>(null)
+
   const selectAllRef = useRef<HTMLInputElement>(null)
 
   const fetchAssessments = useCallback(async () => {
@@ -205,6 +210,70 @@ export default function AdminPage() {
       setCheckedIds(new Set())
     } else {
       setCheckedIds(new Set(allIds))
+    }
+  }
+
+  async function runSimulation() {
+    setSimulating(true)
+    setSimStatus("Creating test assessment...")
+    setSimError(null)
+    setSimResultUrl(null)
+
+    try {
+      // Step 1: Submit assessment with mid-range answers (Developing tier)
+      const submitRes = await fetch("/api/assessment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contact: {
+            firstName: "Test",
+            lastName: "Simulation",
+            email: "jon@untappedchannelstrategy.com",
+            vertical: "Cybersecurity",
+            companySize: "$25M-$75M ARR",
+          },
+          answers: {
+            q1: "MSPs can resell monthly, but the margin structure wasn't designed for them -- it works, but building a practice around it is difficult",
+            q2: "There's a self-service path but most MSPs still lean on us for the first several deployments",
+            q3: "Reps get partial credit informally -- outcomes depend on which rep the partner is working with",
+            q4: "Some onboarding materials and a partner portal -- most partners figure out the rest on their own",
+            q5: "An AE manages it alongside their direct quota -- partners are part of their territory, not a dedicated focus",
+            q6: "Some revenue in year one, with moderate expectations about timing",
+            q7: "A handful of MSPs use us, but we're not known in the community and we're not in distributor catalogs",
+          },
+          points: { q1: 9, q2: 9, q3: 15, q4: 9, q5: 15, q6: 15, q7: 9 },
+        }),
+      })
+
+      if (!submitRes.ok) {
+        const err = await submitRes.json()
+        throw new Error((err as { error?: string }).error || "Assessment creation failed")
+      }
+
+      const { id } = await submitRes.json() as { id: string }
+      setSimStatus("Generating Claude output...")
+
+      // Step 2: Trigger output generation
+      const outputRes = await fetch(`/api/assessment/${id}/generate-output`, {
+        method: "POST",
+      })
+
+      if (!outputRes.ok) {
+        const err = await outputRes.json()
+        throw new Error((err as { error?: string }).error || "Output generation failed")
+      }
+
+      const resultsUrl = `/assessment/results/${id}`
+      setSimResultUrl(resultsUrl)
+      setSimStatus("Done.")
+      window.open(resultsUrl, "_blank")
+      await fetchAssessments()
+
+    } catch (err) {
+      setSimError(err instanceof Error ? err.message : "Simulation failed")
+      setSimStatus(null)
+    } finally {
+      setSimulating(false)
     }
   }
 
@@ -332,6 +401,85 @@ export default function AdminPage() {
             value={weekCount}
           />
         </div>
+
+        {/* ── Simulator ─────────────────────────────────────────────────────────── */}
+        <div style={{
+          background: "#111118",
+          border: "1px solid rgba(255,255,255,0.08)",
+          borderRadius: 10,
+          padding: "20px 24px",
+          marginBottom: 28,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 24,
+          flexWrap: "wrap",
+        }}>
+          <div>
+            <p style={{ fontSize: 14, fontWeight: 700, color: "#ffffff", margin: "0 0 3px" }}>
+              Assessment Simulator
+            </p>
+            <p style={{ fontSize: 13, color: "#8b8b9a", margin: 0 }}>
+              Creates a test assessment, generates Claude output, and opens the results page. Sends to jon@untappedchannelstrategy.com.
+            </p>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 16, flexShrink: 0 }}>
+            {simStatus && !simError && (
+              <span style={{ fontSize: 13, color: "#8b8b9a" }}>{simStatus}</span>
+            )}
+            {simError && (
+              <span style={{ fontSize: 13, color: "#f87171" }}>{simError}</span>
+            )}
+            {simResultUrl && !simulating && (
+              <a
+                href={simResultUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ fontSize: 13, fontWeight: 600, color: "#4cf37b", textDecoration: "none" }}
+              >
+                View results
+              </a>
+            )}
+            <button
+              onClick={runSimulation}
+              disabled={simulating}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                background: simulating ? "rgba(76,243,123,0.15)" : "rgba(76,243,123,0.12)",
+                border: "1px solid rgba(76,243,123,0.3)",
+                borderRadius: 8,
+                color: "#4cf37b",
+                fontSize: 13,
+                fontWeight: 700,
+                padding: "10px 20px",
+                cursor: simulating ? "not-allowed" : "pointer",
+                opacity: simulating ? 0.7 : 1,
+                transition: "opacity 0.15s",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {simulating ? (
+                <>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style={{ animation: "spin 1s linear infinite" }}>
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="40 20" />
+                  </svg>
+                  Running...
+                </>
+              ) : (
+                <>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                    <polygon points="5,3 19,12 5,21" fill="currentColor" />
+                  </svg>
+                  Run Simulation
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
 
         {/* Table card */}
         <div style={{ background: "#111118", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, overflow: "hidden" }}>

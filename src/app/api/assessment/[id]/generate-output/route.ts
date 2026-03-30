@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { generateAssessmentOutput } from "@/lib/generate-output"
 import { recommendService } from "@/data/questions"
+import { sendUserResultsEmail } from "@/lib/lead-notification"
 import type { AssessmentAnswers, AssessmentScores, AssessmentOutput } from "@/types/assessment"
 
 export const maxDuration = 120
@@ -31,6 +32,7 @@ export async function POST(
 
   const assessment = rawData as unknown as {
     first_name: string
+    email: string
     scores: AssessmentScores | null
     answers: AssessmentAnswers | null
     vertical: string | null
@@ -84,6 +86,18 @@ export async function POST(
       console.error("[generate-output] DB save failed:", updateError)
       return NextResponse.json({ error: "Failed to save output" }, { status: 500 })
     }
+
+    // Fire-and-forget: send enriched results email to the submitter
+    void sendUserResultsEmail({
+      assessmentId: id,
+      firstName: assessment.first_name,
+      email: assessment.email,
+      maturityLabel: assessment.scores.maturityLabel,
+      overallScore: assessment.scores.overall,
+      priorityFocus: output.priority_focus,
+      recommendedServiceName: output.recommended_service.name,
+      recommendedServiceRationale: output.recommended_service.rationale,
+    }).catch(() => {})
 
     console.log("[generate-output] saved and returning output")
     return NextResponse.json({ output })

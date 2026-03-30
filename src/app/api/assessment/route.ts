@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { getServerSupabase } from "@/lib/supabase"
-import { sendLeadNotificationEmail, sendUserResultsEmail } from "@/lib/lead-notification"
+import { sendLeadNotificationEmail } from "@/lib/lead-notification"
 import {
   calculateRawScore,
   rescaleScore,
@@ -81,15 +81,6 @@ export async function POST(request: Request) {
       fullName: `${body.contact.firstName.trim()} ${body.contact.lastName.trim()}`,
       email: body.contact.email.trim(),
       companyName: "",
-    }).catch(() => {})
-
-    // Fire-and-forget: send results link to the submitter
-    void sendUserResultsEmail({
-      assessmentId: data.id,
-      firstName: body.contact.firstName.trim(),
-      email: body.contact.email.trim(),
-      maturityLabel: scores.maturityLabel,
-      overallScore: scores.overall,
     }).catch(() => {})
 
     return NextResponse.json({ id: data.id })

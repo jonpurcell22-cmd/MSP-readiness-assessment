@@ -4,13 +4,6 @@ import { useEffect, useState } from "react"
 import { AssessmentLayout } from "@/components/assessment-layout"
 import { Spinner } from "@/components/ui/spinner"
 import { Calendar } from "lucide-react"
-import {
-  Radar,
-  RadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  ResponsiveContainer,
-} from "recharts"
 import type { AssessmentOutput, AssessmentScores } from "@/types/assessment"
 
 interface ResultsContentProps {
@@ -105,14 +98,6 @@ export function ResultsContent({
     )
   }
 
-  const radarData = scores
-    ? [
-        { dimension: "Channel Architecture", score: scores.arch },
-        { dimension: "Go-to-Market Alignment", score: scores.gtm },
-        { dimension: "Partner Experience", score: scores.px },
-      ]
-    : []
-
   return (
     <AssessmentLayout>
 
@@ -204,71 +189,7 @@ export function ResultsContent({
         </div>
       </div>
 
-      {/* ── Section 2: Dimension Scores ── */}
-      {output && scores && radarData.length > 0 && (
-        <div style={SECTION}>
-          <div style={{ width: "100%", maxWidth: CARD_MAX, display: "flex", flexDirection: "column", gap: 24 }}>
-            <div className="card-dark" style={{ padding: "32px 28px", borderLeft: "3px solid #4cf37b" }}>
-              <div style={{ marginBottom: 24 }}>
-                <p style={{ fontSize: 20, fontWeight: 700, color: "#ffffff", margin: "0 0 6px", fontFamily: "'Raleway', sans-serif" }}>
-                  Where Your Program Stands
-                </p>
-                <p style={{ fontSize: 13, color: "#999999", margin: 0, fontFamily: "'Lato', sans-serif", lineHeight: 1.5 }}>
-                  Your score across the three dimensions that determine MSP program success. Weighted by the factors that actually kill programs in practice.
-                </p>
-              </div>
-              <div style={{ width: "100%", height: 260 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <RadarChart data={radarData} cx="50%" cy="50%" outerRadius="70%">
-                    <PolarGrid stroke="#2a2a2a" />
-                    <PolarAngleAxis
-                      dataKey="dimension"
-                      tick={{ fill: "#8b8b9a", fontSize: 12, fontWeight: 500 }}
-                    />
-                    <Radar
-                      name="Score"
-                      dataKey="score"
-                      stroke="#4cf37b"
-                      fill="#4cf37b"
-                      fillOpacity={0.15}
-                      strokeWidth={2}
-                    />
-                  </RadarChart>
-                </ResponsiveContainer>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-around", marginTop: 20, paddingTop: 20, borderTop: "1px solid #2a2a2a" }}>
-                {radarData.map(({ dimension, score }) => {
-                  const descriptor: Record<string, string> = {
-                    "Channel Architecture": "Can MSPs transact, deploy, and operate your product at scale?",
-                    "Go-to-Market Alignment": "Is your org structured to support the channel or work against it?",
-                    "Partner Experience": "What do MSPs actually encounter when they engage you?",
-                  }
-                  return (
-                    <div key={dimension} style={{ textAlign: "center", maxWidth: 120 }}>
-                      <p style={{ fontSize: 24, fontWeight: 700, color: "#ffffff", margin: 0, fontFamily: "'Raleway', sans-serif" }}>{score}</p>
-                      <p style={{ fontSize: 11, color: "#8b8b9a", margin: "4px 0 4px", fontFamily: "'Lato', sans-serif" }}>{dimension}</p>
-                      <p style={{ fontSize: 11, color: "#999999", margin: 0, fontFamily: "'Lato', sans-serif", lineHeight: 1.4 }}>{descriptor[dimension]}</p>
-                    </div>
-                  )
-                })}
-              </div>
-              <p style={{ fontSize: 11, color: "#999999", textAlign: "center", margin: "20px 0 0", fontFamily: "'Lato', sans-serif", paddingTop: 16, borderTop: "1px solid #2a2a2a" }}>
-                Go-to-Market Alignment is weighted more heavily. It is the dimension that determines whether everything else holds.
-              </p>
-            </div>
-
-            {/* Down arrow */}
-            <div style={{ display: "flex", justifyContent: "center" }}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" style={{ color: "#4cf37b", animation: "bounceDown 1.4s ease-in-out infinite" }}>
-                <path d="M12 5v12" stroke="currentColor" strokeWidth="2" strokeLinecap="square" />
-                <path d="M6 13l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="square" strokeLinejoin="miter" />
-              </svg>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Section 3: Narrative + CTA ── */}
+      {/* ── Section 2: Narrative + CTA ── */}
       {output && (
         <div style={SECTION}>
           <div style={{ width: "100%", maxWidth: CARD_MAX, display: "flex", flexDirection: "column", gap: 24 }}>
@@ -328,8 +249,8 @@ export function ResultsContent({
               <h2 style={{ fontSize: 24, fontWeight: 700, color: "#ffffff", letterSpacing: "-0.02em", margin: "0 0 10px", fontFamily: "'Raleway', sans-serif" }}>
                 Ready to turn this diagnosis into a plan?
               </h2>
-              <p style={{ fontSize: 16, color: "#8b8b9a", lineHeight: 1.6, maxWidth: 380, margin: "0 auto 28px", fontFamily: "'Lato', sans-serif" }}>
-                Book a free 90-minute deep-dive with an MSP channel expert. No cost, no obligation.
+              <p style={{ fontSize: 16, color: "#8b8b9a", lineHeight: 1.6, maxWidth: 520, margin: "0 auto 28px", fontFamily: "'Lato', sans-serif" }}>
+                Book a 60-minute review and planning session with me.<br />No Cost.  No obligation.
               </p>
               <a
                 href={bookingUrl}

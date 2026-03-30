@@ -5,12 +5,11 @@ import { useState, useEffect } from "react"
 
 const NAV_LINKS = [
   { label: "Problems", href: "https://untappedchannelstrategy.com#problems" },
+  { label: "Why Fractional?", href: "https://untappedchannelstrategy.com#roi" },
   { label: "How It Works", href: "https://untappedchannelstrategy.com#how-it-works" },
   { label: "Services", href: "https://untappedchannelstrategy.com#services" },
   { label: "About", href: "https://untappedchannelstrategy.com#about" },
 ]
-
-const CALENDLY = "https://calendly.com/jon-untappedchannelstrategy/30min"
 
 export function Header({ rightContent }: { rightContent?: React.ReactNode }) {
   const [scrolled, setScrolled] = useState(false)
@@ -73,14 +72,12 @@ export function Header({ rightContent }: { rightContent?: React.ReactNode }) {
                 </a>
               ))}
               <a
-                href={CALENDLY}
-                target="_blank"
-                rel="noreferrer"
-                style={{ fontFamily: "'Raleway', sans-serif", fontSize: 12, fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "#4CF37B", border: "1px solid #4CF37B", padding: "8px 16px", textDecoration: "none", transition: "transform 0.15s", display: "inline-flex", alignItems: "center" }}
+                href="/assessment"
+                style={{ fontFamily: "'Raleway', sans-serif", fontSize: 12, fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "#4CF37B", border: "1px solid #4CF37B", padding: "8px 20px", textDecoration: "none", transition: "transform 0.15s", display: "inline-flex", alignItems: "center", borderRadius: 999 }}
                 onMouseEnter={e => (e.currentTarget.style.transform = "translateY(-2px)")}
                 onMouseLeave={e => (e.currentTarget.style.transform = "translateY(0)")}
               >
-                Book a Call
+                Take the Free Assessment
               </a>
               {rightContent && (
                 <div style={{ color: "#888888", fontSize: 13 }}>{rightContent}</div>
@@ -148,13 +145,11 @@ export function Header({ rightContent }: { rightContent?: React.ReactNode }) {
 
               <div style={{ paddingTop: 16 }}>
                 <a
-                  href={CALENDLY}
-                  target="_blank"
-                  rel="noreferrer"
+                  href="/assessment"
                   onClick={() => setOpen(false)}
-                  style={{ fontFamily: "'Raleway', sans-serif", fontSize: 14, fontWeight: 800, letterSpacing: "0.18em", textTransform: "uppercase", color: "#4CF37B", border: "1px solid #4CF37B", padding: "16px 20px", textDecoration: "none", display: "flex", alignItems: "center", justifyContent: "center", width: "100%", transition: "transform 0.15s" }}
+                  style={{ fontFamily: "'Raleway', sans-serif", fontSize: 14, fontWeight: 800, letterSpacing: "0.18em", textTransform: "uppercase", color: "#4CF37B", border: "1px solid #4CF37B", padding: "16px 20px", textDecoration: "none", display: "flex", alignItems: "center", justifyContent: "center", width: "100%", transition: "transform 0.15s", borderRadius: 999 }}
                 >
-                  Book a Call
+                  Take the Free Assessment
                 </a>
               </div>
             </div>
