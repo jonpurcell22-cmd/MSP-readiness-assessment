@@ -21,6 +21,7 @@ import {
   ChevronDown,
   Trash2,
   AlertTriangle,
+  Mail,
 } from "lucide-react"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -31,8 +32,9 @@ interface Assessment {
   company_name: string
   title: string | null
   email: string
-  path: string | null
-  path_label: string | null
+  overall_score: number | null
+  maturity_label: string | null
+  has_output: boolean
   ai_output: string | null
   open_text: string | null
   completed_at: string | null
@@ -127,6 +129,9 @@ export default function AdminPage() {
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set())
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleting, setDeleting] = useState(false)
+
+  const [resending, setResending] = useState(false)
+  const [resendResult, setResendResult] = useState<"success" | "error" | null>(null)
 
   const [simulating, setSimulating] = useState(false)
   const [simStatus, setSimStatus] = useState<string | null>(null)
@@ -294,7 +299,28 @@ export default function AdminPage() {
     }
   }
 
-  const completed = assessments.filter((a) => a.completed_at)
+  async function handleResendEmail(id: string) {
+    setResending(true)
+    setResendResult(null)
+    try {
+      const res = await fetch("/api/admin/resend-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      })
+      if (res.ok) {
+        setResendResult("success")
+      } else {
+        setResendResult("error")
+      }
+    } catch {
+      setResendResult("error")
+    } finally {
+      setResending(false)
+    }
+  }
+
+  const completed = assessments.filter((a) => a.has_output || a.completed_at)
   const thisWeek = new Date(); thisWeek.setDate(thisWeek.getDate() - 7)
   const weekCount = assessments.filter((a) => new Date(a.created_at) >= thisWeek).length
 
@@ -303,7 +329,7 @@ export default function AdminPage() {
       if (sortField === "created_at") return x.created_at
       if (sortField === "full_name") return x.full_name?.toLowerCase() ?? ""
       if (sortField === "company_name") return x.company_name?.toLowerCase() ?? ""
-      if (sortField === "path") return x.path_label?.toLowerCase() ?? ""
+      if (sortField === "path") return x.maturity_label?.toLowerCase() ?? ""
       return ""
     }
     const av = get(a), bv = get(b)
@@ -317,7 +343,7 @@ export default function AdminPage() {
   // ── Login gate ──────────────────────────────────────────────────────────────
   if (!authenticated) {
     return (
-      <div style={{ minHeight: "100vh", background: "#0a0a0f", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+      <div style={{ minHeight: "100vh", background: "#0a0a0f", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, position: "relative", zIndex: 1 }}>
         <Card style={{ width: "100%", maxWidth: 360, border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.06)", background: "#111118" }}>
           <CardHeader style={{ textAlign: "center", paddingBottom: 8 }}>
             <div style={{
@@ -359,7 +385,7 @@ export default function AdminPage() {
 
   // ── Dashboard ───────────────────────────────────────────────────────────────
   return (
-    <div style={{ minHeight: "100vh", background: "#0a0a0f" }}>
+    <div style={{ minHeight: "100vh", background: "#0a0a0f", position: "relative", zIndex: 1 }}>
       {/* Top bar */}
       <div style={{ background: "#0a0a0f", borderBottom: "1px solid rgba(255,255,255,0.06)", padding: "0 24px" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", height: 56 }}>
@@ -529,7 +555,7 @@ export default function AdminPage() {
                         { key: "company_name", label: "Company" },
                         { key: null,           label: "Title" },
                         { key: null,           label: "Email" },
-                        { key: "path",         label: "Path" },
+                        { key: null,           label: "Score" },
                         { key: null,           label: "Status" },
                         { key: null,           label: "" },
                       ] as { key: SortField | null; label: string }[]
@@ -597,11 +623,11 @@ export default function AdminPage() {
                             {a.email}
                           </a>
                         </td>
-                        <td style={{ padding: "12px 14px" }}>
-                          <PathBadge label={a.path_label} />
+                        <td style={{ padding: "12px 14px", fontSize: 13, color: "#ffffff" }}>
+                          {a.overall_score != null ? `${a.overall_score}` : "—"}
                         </td>
                         <td style={{ padding: "12px 14px", whiteSpace: "nowrap" }}>
-                          {a.completed_at ? (
+                          {(a.has_output || a.completed_at) ? (
                             <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 12, fontWeight: 600, color: "#4cf37b" }}>
                               <CheckCircle2 style={{ width: 13, height: 13 }} />
                               Complete
@@ -622,20 +648,6 @@ export default function AdminPage() {
                             >
                               View
                             </button>
-                            {a.completed_at && (
-                              <a
-                                href={`/assessment/results/${a.id}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                style={{
-                                  display: "flex", alignItems: "center", justifyContent: "center",
-                                  width: 28, height: 28, borderRadius: 6,
-                                  background: "#1e1e2a", border: "1px solid rgba(255,255,255,0.1)", color: "#8b8b9a",
-                                }}
-                              >
-                                <ExternalLink style={{ width: 13, height: 13 }} />
-                              </a>
-                            )}
                           </div>
                         </td>
                       </tr>
@@ -656,7 +668,7 @@ export default function AdminPage() {
       </div>
 
       {/* ── Detail dialog ─────────────────────────────────────────────────────── */}
-      <Dialog open={!!selected} onOpenChange={() => setSelected(null)}>
+      <Dialog open={!!selected} onOpenChange={() => { setSelected(null); setResendResult(null) }}>
         <DialogContent className="max-h-[88vh] max-w-[660px] overflow-y-auto" style={{ background: "#111118", color: "#ffffff" }}>
           {selected && (
             <>
@@ -673,20 +685,25 @@ export default function AdminPage() {
                     { label: "Name",     value: selected.full_name || "—" },
                     { label: "Title",    value: selected.title || "—" },
                     { label: "Email",    value: selected.email, isEmail: true },
-                    { label: "Path",     value: null, badge: true },
                     { label: "Started",  value: new Date(selected.created_at).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) },
                     ...(selected.completed_at ? [{
                       label: "Completed",
                       value: new Date(selected.completed_at).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }),
                     }] : []),
-                  ].map(({ label, value, isEmail, badge }) => (
+                    ...(selected.overall_score != null ? [{
+                      label: "Score",
+                      value: `${selected.overall_score} / 100`,
+                    }] : []),
+                    ...(selected.maturity_label ? [{
+                      label: "Maturity",
+                      value: selected.maturity_label,
+                    }] : []),
+                  ].map(({ label, value, isEmail }) => (
                     <div key={label}>
                       <p style={{ fontSize: 11, color: "#8b8b9a", margin: "0 0 3px", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.05em" }}>{label}</p>
-                      {badge
-                        ? <PathBadge label={selected.path_label} />
-                        : isEmail
-                          ? <a href={`mailto:${value}`} style={{ fontSize: 14, fontWeight: 500, color: "#4cf37b", textDecoration: "none" }}>{value}</a>
-                          : <p style={{ fontSize: 14, fontWeight: 500, color: "#ffffff", margin: 0 }}>{value as string}</p>
+                      {isEmail
+                        ? <a href={`mailto:${value}`} style={{ fontSize: 14, fontWeight: 500, color: "#4cf37b", textDecoration: "none" }}>{value}</a>
+                        : <p style={{ fontSize: 14, fontWeight: 500, color: "#ffffff", margin: 0 }}>{value as string}</p>
                       }
                     </div>
                   ))}
@@ -725,29 +742,51 @@ export default function AdminPage() {
                     </div>
                   ) : (
                     <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 8, padding: "14px 16px", fontSize: 13, color: "#8b8b9a" }}>
-                      {selected.completed_at
+                      {(selected.has_output || selected.completed_at)
                         ? "AI output not yet generated — open the results page to trigger generation."
                         : "Assessment not yet completed."}
                     </div>
                   )}
                 </div>
 
-                {/* Results link */}
-                {selected.completed_at && (
-                  <a
-                    href={`/assessment/results/${selected.id}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      display: "inline-flex", alignItems: "center", gap: 8, alignSelf: "flex-start",
-                      background: "#4cf37b", color: "#0a0a0f",
-                      fontSize: 13, fontWeight: 700, textDecoration: "none",
-                      padding: "10px 18px", borderRadius: 7,
-                    }}
-                  >
-                    <ExternalLink style={{ width: 14, height: 14 }} />
-                    View Results Page
-                  </a>
+                {/* Actions */}
+                {(selected.has_output || selected.completed_at) && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                    <a
+                      href={`/assessment/results/${selected.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        display: "inline-flex", alignItems: "center", gap: 8,
+                        background: "#4cf37b", color: "#0a0a0f",
+                        fontSize: 13, fontWeight: 700, textDecoration: "none",
+                        padding: "10px 18px", borderRadius: 7,
+                      }}
+                    >
+                      <ExternalLink style={{ width: 14, height: 14 }} />
+                      View Results Page
+                    </a>
+                    <button
+                      onClick={() => handleResendEmail(selected.id)}
+                      disabled={resending}
+                      style={{
+                        display: "inline-flex", alignItems: "center", gap: 8,
+                        background: "#1e1e2a", color: "#ffffff",
+                        fontSize: 13, fontWeight: 600, border: "1px solid rgba(255,255,255,0.1)",
+                        padding: "10px 18px", borderRadius: 7, cursor: resending ? "not-allowed" : "pointer",
+                        opacity: resending ? 0.6 : 1,
+                      }}
+                    >
+                      <Mail style={{ width: 14, height: 14 }} />
+                      {resending ? "Sending…" : "Resend Results Email"}
+                    </button>
+                    {resendResult === "success" && (
+                      <span style={{ fontSize: 13, color: "#4cf37b", fontWeight: 500 }}>Sent!</span>
+                    )}
+                    {resendResult === "error" && (
+                      <span style={{ fontSize: 13, color: "#f87171", fontWeight: 500 }}>Failed to send</span>
+                    )}
+                  </div>
                 )}
               </div>
             </>

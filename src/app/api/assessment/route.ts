@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server"
 import { getServerSupabase } from "@/lib/supabase"
-import { sendLeadNotificationEmail } from "@/lib/lead-notification"
+import { sendLeadNotificationEmail, sendUserResultsEmail } from "@/lib/lead-notification"
+import { generateAssessmentOutput } from "@/lib/generate-output"
 import {
   calculateRawScore,
   rescaleScore,
   getMaturityLabel,
   calculateDimensionScore,
+  recommendService,
 } from "@/data/questions"
 import type { AssessmentContact, AssessmentAnswers, AssessmentScores } from "@/types/assessment"
 
@@ -81,7 +83,40 @@ export async function POST(request: Request) {
       fullName: `${body.contact.firstName.trim()} ${body.contact.lastName.trim()}`,
       email: body.contact.email.trim(),
       companyName: "",
-    }).catch(() => {})
+    }).catch((err) => console.error("[assessment] Admin email failed:", err))
+
+    // Generate output + send results email server-side so it doesn't depend on
+    // the client staying on the results page.
+    const service = recommendService(body.points, scores)
+    void generateAssessmentOutput(
+      body.contact.firstName.trim(),
+      scores,
+      body.answers,
+      service,
+      body.contact.vertical ?? undefined,
+      body.contact.companySize ?? undefined,
+    )
+      .then(async (output) => {
+        // Save output to DB
+        const sb = getServerSupabase()
+        await sb
+          .from("assessments")
+          .update({ output } as never)
+          .eq("id", data.id)
+
+        // Send results email
+        await sendUserResultsEmail({
+          assessmentId: data.id,
+          firstName: body.contact.firstName.trim(),
+          email: body.contact.email.trim(),
+          maturityLabel: scores.maturityLabel,
+          overallScore: scores.overall,
+          priorityFocus: output.priority_focus,
+          recommendedServiceName: output.recommended_service.name,
+          recommendedServiceRationale: output.recommended_service.rationale,
+        })
+      })
+      .catch((err) => console.error("[assessment] Output generation / results email failed:", err))
 
     return NextResponse.json({ id: data.id })
   } catch (e) {

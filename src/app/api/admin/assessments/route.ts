@@ -2,12 +2,6 @@ import { NextResponse } from "next/server";
 import { getServerSupabase } from "@/lib/supabase";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
 
-const PATH_LABELS: Record<string, string> = {
-  scratch: "Starting from Scratch",
-  not_producing: "Not Producing Revenue",
-  producing_broken: "Producing but Broken",
-};
-
 export async function GET() {
   const ok = await isAdminAuthenticated();
   if (!ok) {
@@ -27,24 +21,31 @@ export async function GET() {
 
   const rows = (data ?? []) as Array<Record<string, unknown>>;
   const mapped = rows.map((row) => {
+    // Support both old schema (full_name) and new schema (first_name + last_name)
+    const fullName = (row.full_name as string) ||
+      [row.first_name, row.last_name].filter(Boolean).join(" ") ||
+      "";
+
+    const scores = row.scores as { overall?: number; maturityLabel?: string } | null;
+    const output = row.output as { priority_focus?: string; narrative?: string; recommended_service?: { name?: string; rationale?: string } } | null;
+
+    // Old schema used ai_narrative for output
     const narrative = row.ai_narrative as Record<string, unknown> | null;
     const isV2 = narrative?.v === 2;
-    const path = isV2
-      ? (narrative?.path as string | undefined)
-      : (row.readiness_tier as string | undefined);
-    const aiOutput = isV2 ? (narrative?.output as string | undefined) : undefined;
+    const legacyAiOutput = isV2 ? (narrative?.output as string | undefined) : undefined;
 
     return {
       id: row.id,
-      full_name: row.full_name ?? "",
-      company_name: row.company_name ?? "",
-      title: row.title ?? null,
-      email: row.email ?? "",
-      path: path ?? null,
-      path_label: path ? (PATH_LABELS[path] ?? path) : null,
-      ai_output: aiOutput ?? null,
+      full_name: fullName,
+      company_name: (row.company_name as string) ?? "",
+      title: (row.title as string) ?? null,
+      email: (row.email as string) ?? "",
+      overall_score: scores?.overall ?? null,
+      maturity_label: scores?.maturityLabel ?? null,
+      has_output: !!output,
+      ai_output: output?.narrative ?? legacyAiOutput ?? null,
       open_text: (row.open_text as string | null) ?? null,
-      completed_at: row.completed_at ?? null,
+      completed_at: (row.completed_at as string | null) ?? null,
       created_at: row.created_at,
     };
   });
