@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server"
+import { NextResponse, after } from "next/server"
 import { getServerSupabase } from "@/lib/supabase"
 import { sendLeadNotificationEmail, sendUserResultsEmail } from "@/lib/lead-notification"
 import { generateAssessmentOutput } from "@/lib/generate-output"
@@ -77,46 +77,60 @@ export async function POST(request: Request) {
       )
     }
 
-    // Fire-and-forget: notify admin of new lead
-    void sendLeadNotificationEmail({
-      assessmentId: data.id,
-      fullName: `${body.contact.firstName.trim()} ${body.contact.lastName.trim()}`,
-      email: body.contact.email.trim(),
-      companyName: "",
-    }).catch((err) => console.error("[assessment] Admin email failed:", err))
+    // Use after() so Vercel keeps the function alive after the response is sent.
+    // Without this, fire-and-forget promises get killed when the serverless
+    // function terminates on response.
+    const firstName = body.contact.firstName.trim()
+    const emailAddr = body.contact.email.trim()
+    const assessmentId = data.id
 
-    // Generate output + send results email server-side so it doesn't depend on
-    // the client staying on the results page.
-    const service = recommendService(body.points, scores)
-    void generateAssessmentOutput(
-      body.contact.firstName.trim(),
-      scores,
-      body.answers,
-      service,
-      body.contact.vertical ?? undefined,
-      body.contact.companySize ?? undefined,
-    )
-      .then(async (output) => {
+    after(async () => {
+      // Notify admin of new lead
+      try {
+        await sendLeadNotificationEmail({
+          assessmentId,
+          fullName: `${firstName} ${body.contact.lastName.trim()}`,
+          email: emailAddr,
+          companyName: "",
+        })
+      } catch (err) {
+        console.error("[assessment] Admin email failed:", err)
+      }
+
+      // Generate output + send results email
+      try {
+        const service = recommendService(body.points, scores)
+        const output = await generateAssessmentOutput(
+          firstName,
+          scores,
+          body.answers,
+          service,
+          body.contact.vertical ?? undefined,
+          body.contact.companySize ?? undefined,
+        )
+
         // Save output to DB
         const sb = getServerSupabase()
         await sb
           .from("assessments")
           .update({ output } as never)
-          .eq("id", data.id)
+          .eq("id", assessmentId)
 
         // Send results email
         await sendUserResultsEmail({
-          assessmentId: data.id,
-          firstName: body.contact.firstName.trim(),
-          email: body.contact.email.trim(),
+          assessmentId,
+          firstName,
+          email: emailAddr,
           maturityLabel: scores.maturityLabel,
           overallScore: scores.overall,
           priorityFocus: output.priority_focus,
           recommendedServiceName: output.recommended_service.name,
           recommendedServiceRationale: output.recommended_service.rationale,
         })
-      })
-      .catch((err) => console.error("[assessment] Output generation / results email failed:", err))
+      } catch (err) {
+        console.error("[assessment] Output generation / results email failed:", err)
+      }
+    })
 
     return NextResponse.json({ id: data.id })
   } catch (e) {
