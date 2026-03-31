@@ -91,7 +91,7 @@ export function ResultsContent({
           <Spinner className="size-10" style={{ color: "#4cf37b" }} />
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             <p style={{ fontSize: 17, fontWeight: 600, color: "#ffffff", fontFamily: "'Raleway', sans-serif" }}>Building your scorecard...</p>
-            <p style={{ fontSize: 14, color: "#8b8b9a", fontFamily: "'Lato', sans-serif" }}>This takes about 15 seconds.</p>
+            <p style={{ fontSize: 14, color: "#8b8b9a", fontFamily: "'Lato', sans-serif" }}>This takes about 30 seconds.</p>
           </div>
         </div>
       </AssessmentLayout>
